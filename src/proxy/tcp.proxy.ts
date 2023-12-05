@@ -1,5 +1,4 @@
 import * as net from "net";
-import * as util from "node:util";
 import { Logger } from "@nestjs/common";
 import { EventEmitter } from "node:events";
 
@@ -32,6 +31,9 @@ export class TcpProxy {
     this.server.close();
   }
 
+  /**
+   * TODO: possibility of memory overflow in case of forward socket bottleneck
+   */
   private forwardPackets(
     client: net.Socket,
     forward: net.Socket,
@@ -85,7 +87,6 @@ export class TcpProxy {
 
           this.forwardPackets(clientSocket, forwardSocket, "up");
           this.forwardPackets(forwardSocket, clientSocket, "down");
-          clientSocket.pipe(forwardSocket);
         }
       );
 

@@ -4,14 +4,17 @@
     "rootDir": "src",
     "outDir": "dist",
     "module": "commonjs",
+    "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "strictNullChecks": true,
+    "alwaysStrict": true,
     "strictBindCallApply": true,
     "strictFunctionTypes": true,
+    "strictPropertyInitialization": false,
     "skipLibCheck": true
   }
 }

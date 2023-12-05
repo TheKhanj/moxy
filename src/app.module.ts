@@ -8,7 +8,12 @@ import { DatabaseModule } from "./database/database.module";
   imports: [
     ProxyModule,
     UserModule,
-    DatabaseModule.register(true),
+    DatabaseModule.register({
+      type: "mongodb",
+      dbUri: "mongodb://root:password@127.0.0.1:27017",
+      mutex: "local",
+      flushInterval: 1_000
+    }),
   ],
 })
 export class AppModule {}

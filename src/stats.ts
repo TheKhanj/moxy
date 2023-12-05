@@ -19,6 +19,17 @@ export class Stats implements IStats {
     public passthrough: boolean
   ) {}
 
+  public static create(from: IStats) {
+    return new Stats(
+      from.key,
+      from.up,
+      from.down,
+      from.limit,
+      from.expirationDate,
+      from.passthrough
+    );
+  }
+
   public get total() {
     return this.up + this.down;
   }
@@ -36,8 +47,11 @@ export class Stats implements IStats {
 
   public get enabled() {
     if (!this.passthrough) return false;
-    if (this.total > this.limit) return false;
-    if (new Date().getTime() > stringToDate(this.expirationDate).getTime())
+    if (this.limit != -1 && this.total > this.limit) return false;
+    if (
+      this.expirationDate !== "" &&
+      new Date().getTime() > stringToDate(this.expirationDate).getTime()
+    )
       return false;
     return true;
   }

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
-import { Stats } from "../stats";
-import { Database } from "./database";
+import { Stats } from "../../stats";
+import { Database } from "../database";
 
 @Injectable()
 export class MemoryDatabase implements Database {

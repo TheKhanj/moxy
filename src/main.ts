@@ -4,8 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ProxyStorage } from "./proxy/proxy.storage";
 import { UserService } from "./user/user.service";
-import { MemoryDatabase } from "./database/memory.database";
-import { dateToString } from "./utils";
+import { MemoryDatabase } from "./database/memory/memory.database";
 
 async function readStdin(db: MemoryDatabase) {
   const readline = rl.createInterface(process.stdin);
@@ -22,16 +21,17 @@ async function bootstrap() {
 
   const userControl = app.get(UserService);
   const stats = await userControl.assert("test");
-  stats.limit = 3_000;
-  stats.expirationDate = dateToString(new Date(Date.now() + 100_000_000));
-  await userControl.update("test", stats);
+  await userControl.update("test", stats).catch((err) => {
+    console.log(err.stack);
+    throw err;
+  });
 
   const proxyStorage = app.get(ProxyStorage);
 
   proxyStorage.add("test", 3000, 4000);
   proxyStorage.add("test", 3001, 4001);
 
-  const db = app.get(MemoryDatabase);
+  const db = app.get('Database');
   readStdin(db);
 }
 

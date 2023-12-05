@@ -32,7 +32,7 @@ export class UserService {
   }
 
   public async add(userKey: string) {
-    const stats = new Stats(userKey, 0, 0, 0, dateToString(new Date()), true);
+    const stats = new Stats(userKey, 0, 0, -1, '', true);
 
     await this.database.set(userKey, stats);
 
@@ -57,12 +57,8 @@ export class UserService {
       const stats = await this.get(ev.userKey);
       const update: Partial<IStats> =
         ev.type === "up"
-          ? {
-              up: stats.up + ev.amount,
-            }
-          : {
-              down: stats.down + ev.amount,
-            };
+          ? { up: stats.up + ev.amount }
+          : { down: stats.down + ev.amount };
       await this.update(ev.userKey, update);
     } catch (err) {
       logger.error(err instanceof Error ? err.message : err);
