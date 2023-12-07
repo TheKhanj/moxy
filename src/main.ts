@@ -1,22 +1,28 @@
 import * as rl from "node:readline/promises";
 import { NestFactory } from "@nestjs/core";
+import { INestApplication } from "@nestjs/common";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module";
-import { ProxyStorage } from "./proxy/proxy.storage";
 import { UserService } from "./user/user.service";
+import { ProxyStorage } from "./proxy/proxy.storage";
 import { MemoryDatabase } from "./database/memory/memory.database";
 
-async function readStdin(db: MemoryDatabase) {
-  const readline = rl.createInterface(process.stdin);
-  readline.on("line", async (line) => {
-    if (line === "query") {
-      console.log(await db.get("test"));
-    }
-  });
+function bootstrapSwagger(app: INestApplication) {
+  const config = new DocumentBuilder()
+    .setTitle("Moxy")
+    .setDescription("Moxy API")
+    .setVersion("0.1")
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup("api", app, document);
 }
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
+  const app = await NestFactory.create(AppModule);
+  bootstrapSwagger(app);
+
   await app.init();
 
   const userControl = app.get(UserService);
@@ -28,11 +34,9 @@ async function bootstrap() {
 
   const proxyStorage = app.get(ProxyStorage);
 
-  proxyStorage.add("test", 3000, 4000);
   proxyStorage.add("test", 3001, 4001);
 
-  const db = app.get('Database');
-  readStdin(db);
+  await app.listen(3000);
 }
 
 bootstrap();

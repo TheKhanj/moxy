@@ -1,5 +1,8 @@
 import { stringToDate } from "./utils";
 
+export const UNLIMIT_TRRAFIC = -1;
+export const NO_EXPIRATION_DATE = '';
+
 export type IStats = {
   key: string;
   up: number;
@@ -43,6 +46,17 @@ export class Stats implements IStats {
       this.expirationDate,
       this.passthrough
     );
+  }
+
+  public toObject(): IStats {
+    return {
+      key: this.key,
+      up: this.up,
+      down: this.down,
+      limit: this.limit,
+      expirationDate: this.expirationDate,
+      passthrough: this.passthrough,
+    };
   }
 
   public get enabled() {
