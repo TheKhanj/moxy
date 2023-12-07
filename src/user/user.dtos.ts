@@ -8,7 +8,7 @@ import {
 import { Transform } from "class-transformer";
 import { ApiProperty } from "@nestjs/swagger";
 
-import { NO_EXPIRATION_DATE, UNLIMIT_TRRAFIC } from "../stats";
+import { NO_EXPIRATION_DATE, UNLIMIT_TRAFFIC } from "../stats";
 
 export class UserIdDto {
   @IsNotEmpty()
@@ -17,14 +17,14 @@ export class UserIdDto {
   key: string;
 }
 
-export class TrraficLimitDto {
+export class TrafficLimitDto {
   @IsNumber()
   @IsNotEmpty()
   @ApiProperty({ examples: [1_000_000, "unlimit"] })
   @Min(0)
   @Transform(({ value }) => {
     if (typeof value !== "string") return value;
-    return value.toLowerCase() === "unlimit" ? UNLIMIT_TRRAFIC : value;
+    return value.toLowerCase() === "unlimit" ? UNLIMIT_TRAFFIC : value;
   })
   limit: number;
 }

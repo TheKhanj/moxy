@@ -4,7 +4,7 @@ import { Body, Controller, Get, Param, Post, Put } from "@nestjs/common";
 import {
   AddExpirationDateDto,
   SetExpirationDateDto,
-  TrraficLimitDto,
+  TrafficLimitDto,
   UserIdDto,
 } from "./user.dtos";
 import { UserService } from "./user.service";
@@ -27,13 +27,13 @@ export class UserController {
   }
 }
 
-@ApiTags("Trrafic")
-@Controller("/users/:key/trrafic")
-export class UserTrraficController {
+@ApiTags("Traffic")
+@Controller("/users/:key/traffic")
+export class UserTrafficController {
   public constructor(private readonly service: UserService) {}
 
   @Put("/set")
-  public async set(@Param() userId: UserIdDto, @Body() body: TrraficLimitDto) {
+  public async set(@Param() userId: UserIdDto, @Body() body: TrafficLimitDto) {
     await this.service.update(userId.key, {
       limit: body.limit,
     });
@@ -43,9 +43,9 @@ export class UserTrraficController {
   public async add(
     @Param()
     userId: UserIdDto,
-    @Body() body: TrraficLimitDto
+    @Body() body: TrafficLimitDto
   ) {
-    await this.service.addTrrafic(userId.key, body.limit);
+    await this.service.addTraffic(userId.key, body.limit);
   }
 
   @Put("/reset")
@@ -105,6 +105,7 @@ export class UserPassthroughController {
 
   @Put("/toggle")
   public async toggle(@Param() userId: UserIdDto) {
+    console.log('comes here');
     await this.service.togglePassthrough(userId.key);
   }
 }

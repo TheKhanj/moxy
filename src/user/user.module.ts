@@ -4,17 +4,17 @@ import {
   UserController,
   UserExpirationDateController,
   UserPassthroughController,
-  UserTrraficController,
+  UserTrafficController,
 } from "./user.controllers";
 import { UserService } from "./user.service";
-import { TrraficEventEmitterModule } from "../trrafic.event.emitter.module";
+import { TrafficEventEmitterModule } from "../traffic.event.emitter.module";
 
 @Module({
-  imports: [TrraficEventEmitterModule],
+  imports: [TrafficEventEmitterModule],
   exports: [UserService],
   controllers: [
     UserController,
-    UserTrraficController,
+    UserTrafficController,
     UserExpirationDateController,
     UserPassthroughController,
   ],

@@ -3,14 +3,14 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import { TcpProxy } from "./tcp.proxy";
 import { UserService } from "../user/user.service";
-import { TRRAFIC_EVENT_EMITTER } from "../trrafic.event.emitter.module";
+import { TRAFFIC_EVENT_EMITTER } from "../traffic.event.emitter.module";
 
 @Injectable()
 export class ProxyStorage {
   private readonly proxies: Record<string, TcpProxy> = {};
 
   public constructor(
-    @Inject(TRRAFIC_EVENT_EMITTER)
+    @Inject(TRAFFIC_EVENT_EMITTER)
     private readonly eventEmiter: EventEmitter,
     private readonly userService: UserService
   ) {}

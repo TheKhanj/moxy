@@ -2,11 +2,11 @@ import EventEmitter from "node:events";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { Database } from "../database/database";
-import { TrraficEvent } from "../event/trrafic.event";
+import { TrafficEvent } from "../event/traffic.event";
 import { DatabaseMutex } from "../database/database.mutex";
-import { TRRAFIC_EVENT_EMITTER } from "../trrafic.event.emitter.module";
-import { IStats, NO_EXPIRATION_DATE, Stats, UNLIMIT_TRRAFIC } from "../stats";
+import { TRAFFIC_EVENT_EMITTER } from "../traffic.event.emitter.module";
 import { dateToString, stringToDate } from "../utils";
+import { IStats, NO_EXPIRATION_DATE, Stats, UNLIMIT_TRAFFIC } from "../stats";
 
 const logger = new Logger("UserControlService");
 
@@ -15,13 +15,13 @@ export class UserService {
   public constructor(
     @Inject("Database")
     private readonly database: Database,
-    @Inject(TRRAFIC_EVENT_EMITTER)
+    @Inject(TRAFFIC_EVENT_EMITTER)
     private readonly eventEmitter: EventEmitter,
     @Inject("DatabaseMutex")
     private readonly mutex: DatabaseMutex
   ) {
-    this.eventEmitter.addListener(TrraficEvent.eventName, (ev) =>
-      this.handleNewTrraficEvent(ev)
+    this.eventEmitter.addListener(TrafficEvent.eventName, (ev) =>
+      this.handleNewTrafficEvent(ev)
     );
   }
 
@@ -38,7 +38,7 @@ export class UserService {
       userKey,
       0,
       0,
-      UNLIMIT_TRRAFIC,
+      UNLIMIT_TRAFFIC,
       NO_EXPIRATION_DATE,
       true
     );
@@ -55,7 +55,7 @@ export class UserService {
     );
   }
 
-  public addTrrafic(userKey: string, limit: number) {
+  public addTraffic(userKey: string, limit: number) {
     return this.withLock(userKey, async () => {
       const user = await this.database.get(userKey);
       user.limit += limit;
@@ -94,7 +94,7 @@ export class UserService {
     return stats.clone();
   }
 
-  private async handleNewTrraficEvent(ev: TrraficEvent) {
+  private async handleNewTrafficEvent(ev: TrafficEvent) {
     await this.withLock(ev.userKey, async () => {
       try {
         const stats = await this.get(ev.userKey);

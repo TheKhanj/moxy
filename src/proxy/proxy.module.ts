@@ -2,10 +2,10 @@ import { Module } from "@nestjs/common";
 
 import { UserModule } from "../user/user.module";
 import { ProxyStorage } from "./proxy.storage";
-import { TrraficEventEmitterModule } from "../trrafic.event.emitter.module";
+import { TrafficEventEmitterModule } from "../traffic.event.emitter.module";
 
 @Module({
-  imports: [TrraficEventEmitterModule, UserModule],
+  imports: [TrafficEventEmitterModule, UserModule],
   providers: [ProxyStorage],
 })
 export class ProxyModule {}

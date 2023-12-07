@@ -2,7 +2,7 @@ import * as net from "net";
 import { Logger } from "@nestjs/common";
 import { EventEmitter } from "node:events";
 
-import { TrraficEvent } from "../event/trrafic.event";
+import { TrafficEvent } from "../event/traffic.event";
 
 const logger = new Logger("TcpProxy");
 
@@ -37,7 +37,7 @@ export class TcpProxy {
   private forwardPackets(
     client: net.Socket,
     forward: net.Socket,
-    type: TrraficEvent["type"]
+    type: TrafficEvent["type"]
   ) {
     const dataQueue: Buffer[] = [];
     let dequeing = false;
@@ -50,8 +50,8 @@ export class TcpProxy {
         const isUserEnabled = await this.isUserEnabled();
         if (!isUserEnabled) continue;
 
-        const ev = new TrraficEvent(type, this.userKey, chunk.length);
-        const hasListeners = this.eventEmmiter.emit(TrraficEvent.eventName, ev);
+        const ev = new TrafficEvent(type, this.userKey, chunk.length);
+        const hasListeners = this.eventEmmiter.emit(TrafficEvent.eventName, ev);
         if (!hasListeners)
           logger.warn(
             `Events for user ${this.userKey} does not have any listener`

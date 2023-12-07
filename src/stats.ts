@@ -1,6 +1,6 @@
 import { stringToDate } from "./utils";
 
-export const UNLIMIT_TRRAFIC = -1;
+export const UNLIMIT_TRAFFIC = -1;
 export const NO_EXPIRATION_DATE = '';
 
 export type IStats = {

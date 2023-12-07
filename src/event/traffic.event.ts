@@ -1,5 +1,5 @@
-export class TrraficEvent {
-  public static readonly eventName = 'trrafic';
+export class TrafficEvent {
+  public static readonly eventName = 'traffic';
 
   public constructor(
     public readonly type: "up" | "down",
