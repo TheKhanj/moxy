@@ -16,16 +16,14 @@ import { LocalDatabaseMutex } from "./local.database.mutex";
 import { MemoryDatabaseModule } from "./memory/memory.database.module";
 import { MongoDbDatabaseModule } from "./mongodb/mongodb.database.module";
 
-export const DATABASE = "Database";
-
 const logger = new Logger("Database");
 
 @Global()
 @Module({
-  exports: [DATABASE],
+  exports: ['Database', "DatabaseMutex"],
   providers: [
     {
-      provide: DATABASE,
+      provide: 'Database',
       inject: ["InternalDatabase", "DatabaseMutex"],
       useFactory: (internal: Database, mutex: DatabaseMutex) => {
         return new PatcherDatabase(internal, mutex);
