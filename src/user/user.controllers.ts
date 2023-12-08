@@ -105,7 +105,6 @@ export class UserPassthroughController {
 
   @Put("/toggle")
   public async toggle(@Param() userId: UserIdDto) {
-    console.log('comes here');
     await this.service.togglePassthrough(userId.key);
   }
 }

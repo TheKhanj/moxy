@@ -1,12 +1,10 @@
-import * as rl from "node:readline/promises";
 import { NestFactory } from "@nestjs/core";
-import { INestApplication } from "@nestjs/common";
+import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module";
 import { UserService } from "./user/user.service";
 import { ProxyStorage } from "./proxy/proxy.storage";
-import { MemoryDatabase } from "./database/memory/memory.database";
 
 function bootstrapSwagger(app: INestApplication) {
   const config = new DocumentBuilder()
@@ -23,8 +21,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   bootstrapSwagger(app);
 
-  await app.init();
-
   const userControl = app.get(UserService);
   const stats = await userControl.assert("test");
   await userControl.update("test", stats).catch((err) => {
@@ -35,6 +31,11 @@ async function bootstrap() {
   const proxyStorage = app.get(ProxyStorage);
 
   proxyStorage.add("test", 3001, 4001);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+    })
+  );
 
   await app.listen(3000);
 }

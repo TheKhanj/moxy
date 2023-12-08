@@ -21,7 +21,7 @@ export class TrafficLimitDto {
   @IsNumber()
   @IsNotEmpty()
   @ApiProperty({ examples: [1_000_000, "unlimit"] })
-  @Min(0)
+  @Min(Math.min(UNLIMIT_TRAFFIC, 0))
   @Transform(({ value }) => {
     if (typeof value !== "string") return value;
     return value.toLowerCase() === "unlimit" ? UNLIMIT_TRAFFIC : value;
