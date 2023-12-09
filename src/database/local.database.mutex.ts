@@ -12,7 +12,7 @@ export class LocalDatabaseMutex implements DatabaseMutex {
     let m = this.mutexes[key];
     if (!m) m = this.allocateMutex(key);
 
-    this.acquiring[key]++;
+    this.acquiring[key] = (this.acquiring[key] ?? 0) + 1;
 
     await m.acquire();
   }
