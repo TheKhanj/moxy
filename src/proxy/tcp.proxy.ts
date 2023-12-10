@@ -14,7 +14,7 @@ export class TcpProxy {
     private readonly listeningPort: number,
     private readonly forwardingPort: number,
     private readonly eventEmmiter: EventEmitter,
-    private readonly isUserEnabled: () => Promise<boolean>
+    private readonly isUserEnabled: () => Promise<boolean>,
   ) {
     this.server = this.getServer();
   }
@@ -22,7 +22,7 @@ export class TcpProxy {
   public listen() {
     this.server.listen(this.listeningPort, () => {
       logger.log(
-        `Server listening on port ${this.listeningPort} and forwarding to ${this.forwardingPort}`
+        `Server listening on port ${this.listeningPort} and forwarding to ${this.forwardingPort}`,
       );
     });
   }
@@ -37,7 +37,7 @@ export class TcpProxy {
   private forwardPackets(
     client: net.Socket,
     forward: net.Socket,
-    type: TrafficEvent["type"]
+    type: TrafficEvent["type"],
   ) {
     const dataQueue: Buffer[] = [];
     let dequeing = false;
@@ -54,10 +54,12 @@ export class TcpProxy {
         const hasListeners = this.eventEmmiter.emit(TrafficEvent.eventName, ev);
         if (!hasListeners)
           logger.warn(
-            `Events for user ${this.userKey} does not have any listener`
+            `Events for user ${this.userKey} does not have any listener`,
           );
 
         await new Promise<void>((resolve, reject) => {
+          if (forward.destroyed) return;
+
           forward.write(chunk, (err) => {
             if (err) reject(err);
             resolve();
@@ -87,12 +89,12 @@ export class TcpProxy {
 
           this.forwardPackets(clientSocket, forwardSocket, "up");
           this.forwardPackets(forwardSocket, clientSocket, "down");
-        }
+        },
       );
 
       clientSocket.on("close", () => {
         logger.log(
-          `Client disconnected: ${clientSocket.remoteAddress}:${clientSocket.remotePort}`
+          `Client disconnected: ${clientSocket.remoteAddress}:${clientSocket.remotePort}`,
         );
         forwardSocket.end();
       });
