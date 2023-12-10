@@ -1,7 +1,9 @@
 import * as net from "net";
+import { pipeline } from "node:stream";
 import { Logger } from "@nestjs/common";
 
 import { TrafficEventEmitter } from "../event/traffic.event.emitter";
+import { createCounterStream } from "./counter.stream";
 
 const logger = new Logger("TcpProxy");
 
@@ -30,57 +32,6 @@ export class TcpProxy {
     this.server.close();
   }
 
-  /**
-   * TODO: possibility of memory overflow in case of forward socket bottleneck
-   */
-  private forwardPackets(
-    client: net.Socket,
-    forward: net.Socket,
-    type: "up" | "down",
-  ) {
-    const dataQueue: Buffer[] = [];
-    let dequeing = false;
-
-    const dequeue = async () => {
-      while (true) {
-        const chunk = dataQueue.shift();
-        if (chunk === undefined) break;
-
-        const isUserEnabled = await this.isUserEnabled();
-        if (!isUserEnabled) continue;
-
-        const hasListeners = this.eventEmmiter.emit(
-          "traffic",
-          type,
-          this.userKey,
-          chunk.length,
-        );
-        if (!hasListeners)
-          logger.warn(
-            `Events for user ${this.userKey} does not have any listener`,
-          );
-
-        await new Promise<void>((resolve, reject) => {
-          if (forward.destroyed) return;
-
-          forward.write(chunk, (err) => {
-            if (err) reject(err);
-            resolve();
-          });
-        });
-      }
-
-      dequeing = false;
-    };
-
-    client.on("data", (chunk: Buffer) => {
-      dataQueue.push(chunk);
-      if (dequeing) return;
-      dequeing = true;
-      dequeue().catch((err) => logger.error(err));
-    });
-  }
-
   private getServer() {
     return net.createServer((clientSocket) => {
       // TODO: add recovery mechanism
@@ -90,8 +41,23 @@ export class TcpProxy {
         () => {
           logger.log(`Connected to forward port: ${this.forwardingPort}`);
 
-          this.forwardPackets(clientSocket, forwardSocket, "up");
-          this.forwardPackets(forwardSocket, clientSocket, "down");
+          const upCounter = createCounterStream(
+            this.eventEmmiter,
+            "up",
+            this.userKey,
+          );
+
+          const downCounter = createCounterStream(
+            this.eventEmmiter,
+            "down",
+            this.userKey,
+          );
+
+          clientSocket.pipe(upCounter);
+          upCounter.pipe(forwardSocket);
+
+          forwardSocket.pipe(downCounter);
+          downCounter.pipe(clientSocket);
         },
       );
 

@@ -22,8 +22,8 @@ async function bootstrap() {
   bootstrapSwagger(app);
 
   const userControl = app.get(UserService);
-  const stats = await userControl.assert("test");
-  await userControl.update("test", stats).catch((err) => {
+  const stats = await userControl.assert("test2");
+  await userControl.update("test2", stats).catch((err) => {
     console.log(err.stack);
     throw err;
   });
@@ -34,7 +34,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
-    })
+    }),
   );
 
   await app.listen(3000);
