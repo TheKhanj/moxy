@@ -1,9 +1,8 @@
-import EventEmitter from "node:events";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { Database } from "../database/database";
-import { TrafficEvent } from "../event/traffic.event";
 import { DatabaseMutex } from "../database/database.mutex";
+import { TrafficEventEmitter } from "../event/traffic.event.emitter";
 import { TRAFFIC_EVENT_EMITTER } from "../traffic.event.emitter.module";
 import { dateToString, stringToDate } from "../utils";
 import { IStats, NO_EXPIRATION_DATE, Stats, UNLIMIT_TRAFFIC } from "../stats";
@@ -16,12 +15,12 @@ export class UserService {
     @Inject("Database")
     private readonly database: Database,
     @Inject(TRAFFIC_EVENT_EMITTER)
-    private readonly eventEmitter: EventEmitter,
+    private readonly eventEmitter: TrafficEventEmitter,
     @Inject("DatabaseMutex")
-    private readonly mutex: DatabaseMutex
+    private readonly mutex: DatabaseMutex,
   ) {
-    this.eventEmitter.addListener(TrafficEvent.eventName, (ev) =>
-      this.handleNewTrafficEvent(ev)
+    this.eventEmitter.addListener("traffic", (...args) =>
+      this.handleNewTrafficEvent(...args),
     );
   }
 
@@ -40,7 +39,7 @@ export class UserService {
       0,
       UNLIMIT_TRAFFIC,
       NO_EXPIRATION_DATE,
-      true
+      true,
     );
 
     await this.database.set(userKey, stats);
@@ -51,7 +50,7 @@ export class UserService {
   public async update(userKey: string, update: Partial<IStats>) {
     return this.withLock(
       userKey,
-      async () => await this._update(userKey, update)
+      async () => await this._update(userKey, update),
     );
   }
 
@@ -94,15 +93,19 @@ export class UserService {
     return stats.clone();
   }
 
-  private async handleNewTrafficEvent(ev: TrafficEvent) {
-    await this.withLock(ev.userKey, async () => {
+  private async handleNewTrafficEvent(
+    type: "up" | "down",
+    userKey: string,
+    amount: number,
+  ) {
+    await this.withLock(userKey, async () => {
       try {
-        const stats = await this.get(ev.userKey);
+        const stats = await this.get(userKey);
         const update: Partial<IStats> =
-          ev.type === "up"
-            ? { up: stats.up + ev.amount }
-            : { down: stats.down + ev.amount };
-        await this._update(ev.userKey, update);
+          type === "up"
+            ? { up: stats.up + amount }
+            : { down: stats.down + amount };
+        await this._update(userKey, update);
       } catch (err) {
         logger.error(err instanceof Error ? err.message : err);
       }

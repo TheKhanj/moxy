@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
-import EventEmitter from "node:events";
+
+import { TrafficEventEmitter } from "./event/traffic.event.emitter";
 
 export const TRAFFIC_EVENT_EMITTER = "TrafficEventEmitter";
 
@@ -8,7 +9,7 @@ export const TRAFFIC_EVENT_EMITTER = "TrafficEventEmitter";
   providers: [
     {
       provide: TRAFFIC_EVENT_EMITTER,
-      useValue: new EventEmitter(),
+      useValue: new TrafficEventEmitter(),
     },
   ],
 })
