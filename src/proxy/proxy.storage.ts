@@ -2,7 +2,6 @@ import EventEmitter from "node:events";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { TcpProxy } from "./tcp.proxy";
-import { UserService } from "../user/user.service";
 import { TRAFFIC_EVENT_EMITTER } from "../traffic.event.emitter.module";
 
 @Injectable()
@@ -12,20 +11,21 @@ export class ProxyStorage {
   public constructor(
     @Inject(TRAFFIC_EVENT_EMITTER)
     private readonly eventEmiter: EventEmitter,
-    private readonly userService: UserService
+    @Inject("CounterTimeout")
+    private readonly counterTimeout: number,
   ) {}
 
   public add(
     userKey: string,
     listentingPort: number,
-    forwardingPort: number
+    forwardingPort: number,
   ): TcpProxy {
     const proxy = new TcpProxy(
       userKey,
       listentingPort,
       forwardingPort,
       this.eventEmiter,
-      async () => (await this.userService.get(userKey)).enabled
+      this.counterTimeout,
     );
 
     this.proxies[userKey] = proxy;

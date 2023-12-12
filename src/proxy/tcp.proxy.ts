@@ -1,5 +1,4 @@
 import * as net from "net";
-import { pipeline } from "node:stream";
 import { Logger } from "@nestjs/common";
 
 import { TrafficEventEmitter } from "../event/traffic.event.emitter";
@@ -15,7 +14,7 @@ export class TcpProxy {
     private readonly listeningPort: number,
     private readonly forwardingPort: number,
     private readonly eventEmmiter: TrafficEventEmitter,
-    private readonly isUserEnabled: () => Promise<boolean>,
+    private readonly counterTimeout: number,
   ) {
     this.server = this.getServer();
   }
@@ -45,12 +44,14 @@ export class TcpProxy {
             this.eventEmmiter,
             "up",
             this.userKey,
+            this.counterTimeout,
           );
 
           const downCounter = createCounterStream(
             this.eventEmmiter,
             "down",
             this.userKey,
+            this.counterTimeout,
           );
 
           clientSocket.pipe(upCounter);

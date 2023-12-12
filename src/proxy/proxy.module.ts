@@ -6,6 +6,12 @@ import { TrafficEventEmitterModule } from "../traffic.event.emitter.module";
 
 @Module({
   imports: [TrafficEventEmitterModule, UserModule],
-  providers: [ProxyStorage],
+  providers: [
+    ProxyStorage,
+    {
+      provide: "CounterTimeout",
+      useValue: 5_000,
+    },
+  ],
 })
 export class ProxyModule {}
