@@ -10,7 +10,7 @@ import { StatsModel } from "./mongodb.schema";
 export class MongoDbDatabase implements Database {
   public constructor(
     @InjectModel(StatsModel.name)
-    private readonly model: Model<StatsModel>
+    private readonly model: Model<StatsModel>,
   ) {}
 
   public async get(key: string): Promise<Stats> {
@@ -18,7 +18,7 @@ export class MongoDbDatabase implements Database {
       key,
     });
 
-    if (!doc) throw new Error("not found");
+    if (!doc) throw new Error(`user ${key} not found`);
 
     return Stats.create(doc.toObject());
   }
