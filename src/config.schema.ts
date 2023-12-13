@@ -17,7 +17,7 @@ const UserTcpProxyConfigSchema = z.object({
 const UserProxyConfigSchema = z.union([UserTcpProxyConfigSchema, z.never()]);
 
 const UserConfigSchema = z.object({
-  key: z.string(),
+  key: z.string().default("placeholder"),
   remark: z.string().optional(),
   limit: z.union([z.number(), z.literal("unlimit")]).default("unlimit"),
   expirationDate: ExpirationDateSchema,
@@ -83,5 +83,5 @@ export const ConfigSchema = z.object({
   ttl: z.number().default(5 * 60_000),
   proxy: ProxyConfigSchema,
   database: DatabaseConfigSchema,
-  users: z.array(UserConfigSchema),
+  users: z.record(UserConfigSchema),
 });

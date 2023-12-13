@@ -18,5 +18,7 @@ export async function withErrorLogging<T>(
   fn: () => Promise<T>,
   logger: Logger
 ) {
-  return fn().catch((err) => logger.error(err));
+  return fn().catch((err) => {
+    logger.error(err);
+  });
 }

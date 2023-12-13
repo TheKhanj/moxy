@@ -159,7 +159,7 @@ export class UserFactory {
 
   public async get(userKey: string): Promise<User> {
     const config = await this.configService.getConfig();
-    const userConfig = config.users.find((user) => user.key === userKey);
+    const userConfig = config.users[userKey];
     if (!userConfig) throw new Error(`no config found for user ${userKey}`);
 
     const stats = await this.statsService.get(userKey);

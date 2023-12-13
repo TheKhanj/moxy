@@ -34,13 +34,14 @@ class TcpProxy implements Proxy {
   }
 
   public listen() {
-    return new Promise<void>((res) => {
-      this.server.listen(this.listeningPort, () => {
+    return new Promise<void>((res, rej) => {
+      const server = this.server.listen(this.listeningPort, () => {
         this.logger.log(
           `Started tcp proxy ${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`
         );
         res();
       });
+      server.on("error", rej);
     });
   }
 
@@ -124,18 +125,14 @@ export class ProxyStorage {
         await userStatsService.assert(userKey);
         const user = await userFactory.get(userKey);
         if (!user.isEnabled()) return;
-        this.add(user.config.key, user.config.proxy).catch((err) =>
-          this.logger.error(err)
-        );
+        await this.add(user.config.key, user.config.proxy);
       }, this.logger)
     );
     this.eventEmiter.on("enable-user", (userKey) =>
       withErrorLogging(async () => {
         await userStatsService.assert(userKey);
         const user = await userFactory.get(userKey);
-        this.add(user.config.key, user.config.proxy).catch((err) =>
-          this.logger.error(err)
-        );
+        await this.add(user.config.key, user.config.proxy);
       }, this.logger)
     );
     this.eventEmiter.on("delete-user", (userKey) => {
@@ -145,7 +142,17 @@ export class ProxyStorage {
       withErrorLogging(async () => {
         await userStatsService.assert(userKey);
         const user = await userFactory.get(userKey);
-        this.delete(user.config.key).catch((err) => this.logger.error(err));
+        await this.delete(user.config.key);
+      }, this.logger)
+    );
+    this.eventEmiter.on("update-user", (userKey) =>
+      withErrorLogging(async () => {
+        await userStatsService.assert(userKey);
+        const user = await userFactory.get(userKey);
+        await this.delete(user.config.key).catch((err) =>
+          this.logger.warn(err)
+        );
+        await this.add(user.config.key, user.config.proxy);
       }, this.logger)
     );
   }

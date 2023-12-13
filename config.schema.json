@@ -100,13 +100,10 @@
       "required": []
     },
     "users": {
-      "type": "array",
-      "items": {
+      "type": "object",
+      "additionalProperties": {
         "type": "object",
         "properties": {
-          "key": {
-            "type": "string"
-          },
           "remark": {
             "type": "string"
           },
@@ -165,7 +162,6 @@
           }
         },
         "required": [
-          "key",
           "proxy"
         ]
       }

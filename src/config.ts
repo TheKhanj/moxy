@@ -66,7 +66,7 @@ export type Config = {
   ttl: number;
   proxy: ProxyConfig;
   database: DatabaseConfig;
-  users: UserConfig[];
+  users: Record<string, UserConfig>;
 };
 
 @Injectable()
@@ -91,7 +91,11 @@ export class ConfigService {
     const content = await promisify(readFile)(file);
     const json = JSON.parse(content.toString());
 
-    return ConfigSchema.parse(json);
+    const parsed = ConfigSchema.parse(json);
+    Object.keys(parsed.users).forEach((key) => {
+      parsed.users[key].key = key;
+    });
+    return parsed;
   }
 
   public async getConfig(): Promise<Config> {
@@ -106,43 +110,37 @@ export class ConfigService {
 
     await this.emitChangeEvents(this.cache, this.oldCache);
 
-    delete this["oldCache"];
-    this.logger.log('Refreshed config cache')
+    this.logger.log("Refreshed config cache");
 
     return this.cache;
   }
 
   private async emitChangeEvents(newConfig: Config, oldConfig?: Config) {
-    const newUsers = newConfig.users.filter(
-      (newUser) =>
-        !(oldConfig?.users ?? []).find((oldUser) => oldUser.key === newUser.key)
+    const newUsers = Object.keys(newConfig.users).filter((newUserKey) =>
+      oldConfig ? !oldConfig.users[newUserKey] : true
     );
     const deletedUsers = oldConfig
-      ? oldConfig.users.filter(
-          (oldUser) =>
-            !newConfig.users.find((newUser) => oldUser.key === newUser.key)
+      ? Object.keys(oldConfig.users).filter(
+          (oldUserKey) => !newConfig.users[oldUserKey]
         )
       : [];
     const updatedUsers = oldConfig
-      ? newConfig.users.filter((newUser) => {
-          const oldUser = oldConfig.users.find(
-            (oldUser) => oldUser.key === newUser.key
-          );
+      ? Object.keys(newConfig.users).filter((newUserKey) => {
+          const oldUser = oldConfig.users[newUserKey];
           if (!oldUser) return false;
+          const newUser = newConfig.users[newUserKey];
           const sameConfig =
-            JSON.stringify(oldUser) === JSON.stringify(newConfig);
+            JSON.stringify(oldUser) === JSON.stringify(newUser);
           return !sameConfig;
         })
       : [];
 
-    newUsers.forEach((newUser) =>
-      this.eventEmitter.emit("new-user", newUser.key)
-    );
+    newUsers.forEach((newUser) => this.eventEmitter.emit("new-user", newUser));
     deletedUsers.forEach((deletedUser) =>
-      this.eventEmitter.emit("delete-user", deletedUser.key)
+      this.eventEmitter.emit("delete-user", deletedUser)
     );
     updatedUsers.forEach((changedUser) =>
-      this.eventEmitter.emit("update-user", changedUser.key)
+      this.eventEmitter.emit("update-user", changedUser)
     );
   }
 }
