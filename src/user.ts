@@ -6,12 +6,17 @@ import {
   Module,
 } from "@nestjs/common";
 
+import {
+  ConfigModule,
+  ConfigService,
+  DatabaseConfig,
+  UserConfig,
+} from "./config";
 import { Database } from "./database/database";
 import { stringToDate } from "./utils";
 import { DatabaseMutex } from "./database/database.mutex";
 import { DatabaseModule } from "./database/database.module";
-import { DatabaseConfig, UserConfig } from "./config";
-import { EventModule, TrafficEventEmitter } from "./event";
+import { EventModule, MoxyEventEmitter } from "./event";
 
 export type IUserStats = {
   key: string;
@@ -49,19 +54,17 @@ export class UserStats implements IUserStats {
 
 export class User {
   public constructor(
-    private readonly getConfig: () => Promise<UserConfig>,
-    private readonly getStats: () => Promise<UserStats>
+    public readonly config: UserConfig,
+    public readonly stats: UserStats
   ) {}
 
-  public async isEnabled() {
-    const stats = await this.getStats();
-    const config = await this.getConfig();
-
-    if (!config.passthrough) return false;
-    if (config.limit != "unlimit" && stats.total > config.limit) return false;
+  public isEnabled() {
+    if (!this.config.passthrough) return false;
+    if (this.config.limit != "unlimit" && this.stats.total > this.config.limit)
+      return false;
     if (
-      config.expirationDate !== "unlimit" &&
-      new Date().getTime() > stringToDate(config.expirationDate).getTime()
+      this.config.expirationDate !== "unlimit" &&
+      new Date().getTime() > stringToDate(this.config.expirationDate).getTime()
     )
       return false;
     return true;
@@ -75,11 +78,11 @@ export class UserStatsService {
   public constructor(
     @Inject("Database")
     private readonly database: Database,
-    private readonly eventEmitter: TrafficEventEmitter,
+    private readonly eventEmitter: MoxyEventEmitter,
     @Inject("DatabaseMutex")
     private readonly mutex: DatabaseMutex
   ) {
-    this.eventEmitter.addListener("traffic", (...args) =>
+    this.eventEmitter.on("traffic", (...args) =>
       this.handleNewTrafficEvent(...args)
     );
   }
@@ -147,16 +150,37 @@ export class UserStatsService {
   }
 }
 
+@Injectable()
+export class UserFactory {
+  public constructor(
+    private readonly configService: ConfigService,
+    private readonly statsService: UserStatsService
+  ) {}
+
+  public async get(userKey: string): Promise<User> {
+    const config = await this.configService.getConfig();
+    const userConfig = config.users.find((user) => user.key === userKey);
+    if (!userConfig) throw new Error(`no config found for user ${userKey}`);
+
+    const stats = await this.statsService.get(userKey);
+
+    return new User(userConfig, stats);
+  }
+}
+
 @Module({
   imports: [EventModule],
-  exports: [UserStatsService],
-  providers: [UserStatsService],
+  exports: [UserStatsService, UserFactory],
+  providers: [UserStatsService, UserFactory],
 })
 export class UserModule {
-  public static register(databaseConfig: DatabaseConfig): DynamicModule {
+  public static register(
+    configModule: DynamicModule,
+    databaseConfig: DatabaseConfig
+  ): DynamicModule {
     return {
       module: UserModule,
-      imports: [DatabaseModule.register(databaseConfig)],
+      imports: [configModule, DatabaseModule.register(databaseConfig)],
     };
   }
 }

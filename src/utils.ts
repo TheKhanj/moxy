@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 export function dateToString(date: Date) {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 }
@@ -10,4 +12,11 @@ export function stringToDate(dateString: string) {
   dateObject.setHours(0, 0, 0, 0);
 
   return dateObject;
+}
+
+export async function withErrorLogging<T>(
+  fn: () => Promise<T>,
+  logger: Logger
+) {
+  return fn().catch((err) => logger.error(err));
 }

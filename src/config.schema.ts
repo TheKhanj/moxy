@@ -61,23 +61,27 @@ const DatabaseMutexConfigSchema = z
     type: "local",
   });
 
-const DatabaseConfigSchema = z.object({
-  driver: DatabaseDriverConfigSchema,
-  mutex: DatabaseMutexConfigSchema,
-  flush: z.number().default(10_000),
-});
+const DatabaseConfigSchema = z
+  .object({
+    driver: DatabaseDriverConfigSchema,
+    mutex: DatabaseMutexConfigSchema,
+    flush: z.number().default(10_000),
+  })
+  .default({});
 
-const ProxyConfigSchema = z.object({
-  counter: z.object({
-    flushTimeout: z.number().default(10_000),
-  }),
-});
+const ProxyConfigSchema = z
+  .object({
+    counter: z
+      .object({
+        flushTimeout: z.number().default(10_000),
+      })
+      .default({}),
+  })
+  .default({});
 
 export const ConfigSchema = z.object({
+  ttl: z.number().default(5 * 60_000),
   proxy: ProxyConfigSchema,
   database: DatabaseConfigSchema,
   users: z.array(UserConfigSchema),
 });
-
-// write json schema for Foo
-type Foo = z.input<typeof ConfigSchema>;
