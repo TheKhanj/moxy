@@ -4,30 +4,24 @@ import {
   Inject,
   Logger,
   Module,
-  NotImplementedException,
   OnApplicationBootstrap,
   OnApplicationShutdown,
 } from "@nestjs/common";
 
-import { Database } from "./database";
-import { DatabaseMutex } from "./database.mutex";
-import { PatcherDatabase } from "./patcher.database";
-import { LocalDatabaseMutex } from "./local.database.mutex";
-import { MemoryDatabaseModule } from "./memory/memory.database.module";
-import { MongoDbDatabaseModule } from "./mongodb/mongodb.database.module";
+import { DatabaseMutex, LocalDatabaseMutex } from "./database.mutex";
+import { Database, MemoryDatabase, PatcherDatabase } from "./database";
+import { DatabaseConfig, DatabaseDriverConfig } from "../config";
+import { MongoDbDatabaseModule } from "./mongodb.database";
 
 const logger = new Logger("Database");
 
 @Global()
 @Module({
-  exports: ['Database', "DatabaseMutex"],
+  exports: ["Database", "DatabaseMutex"],
   providers: [
     {
-      provide: 'Database',
-      inject: ["InternalDatabase", "DatabaseMutex"],
-      useFactory: (internal: Database, mutex: DatabaseMutex) => {
-        return new PatcherDatabase(internal, mutex);
-      },
+      provide: "Database",
+      useClass: PatcherDatabase,
     },
   ],
 })
@@ -41,38 +35,51 @@ export class DatabaseModule
     private readonly flushInterval: number
   ) {}
 
-  public static register(
-    params: (
-      | {
-          type: "memory";
-        }
-      | {
-          type: "mongodb";
-          dbUri: string;
-        }
-    ) & {
-      mutex: "local";
-      flushInterval: number;
+  private static getDriver(config: DatabaseDriverConfig): DynamicModule {
+    switch (config.type) {
+      case "mongodb":
+        return {
+          module: DatabaseModule,
+          imports: [MongoDbDatabaseModule.register(config)],
+        };
+      case "memory":
+        return {
+          module: DatabaseModule,
+          providers: [
+            {
+              provide: "InternalDatabase",
+              useClass: MemoryDatabase,
+            },
+          ],
+        };
+      case "file":
+      default:
+        throw new Error(
+          `Database driver of type ${config.type} is not implemented`
+        );
     }
-  ): DynamicModule {
+  }
+
+  public static register(config: DatabaseConfig): DynamicModule {
+    const driver = this.getDriver(config.driver);
+
     return {
       module: DatabaseModule,
-      imports:
-        params.type === "memory"
-          ? [MemoryDatabaseModule]
-          : params.type === "mongodb"
-          ? [MongoDbDatabaseModule.register(params.dbUri)]
-          : [],
+      imports: [...(driver.imports ?? [])],
       providers: [
+        ...(driver.providers ?? []),
         {
           provide: "FlushInterval",
-          useValue: params.flushInterval,
+          useValue: config.flush,
         },
         {
           provide: "DatabaseMutex",
           useFactory: () => {
-            if (params.mutex === "local") return new LocalDatabaseMutex();
-            throw new NotImplementedException();
+            if (config.mutex.type === "local") return new LocalDatabaseMutex();
+
+            throw new Error(
+              `Mutex of type ${config.mutex.type} is not implemented`
+            );
           },
         },
       ],

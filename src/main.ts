@@ -1,43 +1,29 @@
 import { NestFactory } from "@nestjs/core";
-import { INestApplication, ValidationPipe } from "@nestjs/common";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { DynamicModule, Module } from "@nestjs/common";
 
-import { AppModule } from "./app.module";
-import { UserService } from "./user/user.service";
-import { ProxyStorage } from "./proxy/proxy.storage";
+import { Config } from "./config";
+import { UserModule } from "./user";
+import { ProxyModule } from "./proxy";
+import { DatabaseModule } from "./database/database.module";
 
-function bootstrapSwagger(app: INestApplication) {
-  const config = new DocumentBuilder()
-    .setTitle("Moxy")
-    .setDescription("Moxy API")
-    .setVersion("0.1")
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api", app, document);
+@Module({})
+export class AppModule {
+  public static register(config: Config): DynamicModule {
+    return {
+      module: AppModule,
+      imports: [
+        UserModule.register(config.database),
+        DatabaseModule.register(config.database),
+        ProxyModule.register(config.proxy, config.database),
+      ],
+    };
+  }
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  bootstrapSwagger(app);
+  const app = await NestFactory.createApplicationContext(AppModule);
 
-  const userControl = app.get(UserService);
-  const stats = await userControl.assert("test2");
-  await userControl.update("test2", stats).catch((err) => {
-    console.log(err.stack);
-    throw err;
-  });
-
-  const proxyStorage = app.get(ProxyStorage);
-
-  proxyStorage.add("test", 3001, 4001);
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-    }),
-  );
-
-  await app.listen(3000);
+  await app.init();
 }
 
 bootstrap();
