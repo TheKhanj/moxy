@@ -1,5 +1,5 @@
 {
-  "$schema": "./config.schema.json",
+  "$schema": "https://raw.githubusercontent.com/TheKhanj/moxy/master/config.schema.json",
   "users": {
     "16401b2c-261f-4de9-b4e1-1bbe78973850": {
       "remark": "example-user",
