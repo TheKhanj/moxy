@@ -91,7 +91,7 @@ export class DatabaseModule
   public onApplicationBootstrap() {
     this.interval = setInterval(() => {
       this.patcher.flush().then((results) => {
-        logger.log("Flushing entities");
+        logger.log("Flushed entities");
         const failedCount = results
           .filter((result) => result.status === "rejected")
           .reduce((prev) => prev + 1, 0);

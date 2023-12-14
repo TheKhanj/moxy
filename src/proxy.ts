@@ -120,10 +120,10 @@ export class ProxyStorage {
     userFactory: UserFactory,
     userStatsService: UserStatsService
   ) {
-    this.eventEmiter.on("new-user", (userKey) =>
+    this.eventEmiter.on("new-user", (userConfig) =>
       withErrorLogging(async () => {
-        await userStatsService.assert(userKey);
-        const user = await userFactory.get(userKey);
+        await userStatsService.assert(userConfig.key);
+        const user = await userFactory.get(userConfig.key);
         if (!user.isEnabled()) return;
         await this.add(user.config.key, user.config.proxy);
       }, this.logger)
@@ -145,13 +145,17 @@ export class ProxyStorage {
         await this.delete(user.config.key);
       }, this.logger)
     );
-    this.eventEmiter.on("update-user", (userKey) =>
+    this.eventEmiter.on("update-user", (prev, curr) =>
       withErrorLogging(async () => {
-        await userStatsService.assert(userKey);
-        const user = await userFactory.get(userKey);
+        const changedConfig =
+          JSON.stringify(prev.proxy) !== JSON.stringify(curr.proxy);
+        if (!changedConfig) return;
+        await userStatsService.assert(curr.key);
+        const user = await userFactory.get(curr.key);
         await this.delete(user.config.key).catch((err) =>
           this.logger.warn(err)
         );
+        if (!user.isEnabled()) return;
         await this.add(user.config.key, user.config.proxy);
       }, this.logger)
     );
@@ -192,6 +196,7 @@ export class ProxyStorage {
 
   public async delete(userKey: string): Promise<void> {
     const proxy = this.get(userKey);
+    delete this.proxies[userKey];
 
     await proxy.destroy();
   }

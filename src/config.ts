@@ -1,3 +1,4 @@
+import * as assert from "node:assert";
 import { readFile } from "node:fs";
 import { promisify } from "node:util";
 import { DynamicModule, Injectable, Logger, Module } from "@nestjs/common";
@@ -116,15 +117,15 @@ export class ConfigService {
   }
 
   private async emitChangeEvents(newConfig: Config, oldConfig?: Config) {
-    const newUsers = Object.keys(newConfig.users).filter((newUserKey) =>
+    const newUsersKeys = Object.keys(newConfig.users).filter((newUserKey) =>
       oldConfig ? !oldConfig.users[newUserKey] : true
     );
-    const deletedUsers = oldConfig
+    const deletedUsersKeys = oldConfig
       ? Object.keys(oldConfig.users).filter(
           (oldUserKey) => !newConfig.users[oldUserKey]
         )
       : [];
-    const updatedUsers = oldConfig
+    const updatedUsersKeys = oldConfig
       ? Object.keys(newConfig.users).filter((newUserKey) => {
           const oldUser = oldConfig.users[newUserKey];
           if (!oldUser) return false;
@@ -135,13 +136,20 @@ export class ConfigService {
         })
       : [];
 
-    newUsers.forEach((newUser) => this.eventEmitter.emit("new-user", newUser));
-    deletedUsers.forEach((deletedUser) =>
-      this.eventEmitter.emit("delete-user", deletedUser)
+    newUsersKeys.forEach((newUserKey) =>
+      this.eventEmitter.emit("new-user", newConfig.users[newUserKey])
     );
-    updatedUsers.forEach((changedUser) =>
-      this.eventEmitter.emit("update-user", changedUser)
+    deletedUsersKeys.forEach((deletedUserKey) =>
+      this.eventEmitter.emit("delete-user", deletedUserKey)
     );
+    updatedUsersKeys.forEach((changedUserKey) => {
+      assert.ok(oldConfig);
+      this.eventEmitter.emit(
+        "update-user",
+        oldConfig.users[changedUserKey],
+        newConfig.users[changedUserKey]
+      );
+    });
   }
 }
 

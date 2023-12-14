@@ -6,17 +6,12 @@ import {
   Module,
 } from "@nestjs/common";
 
-import {
-  ConfigModule,
-  ConfigService,
-  DatabaseConfig,
-  UserConfig,
-} from "./config";
 import { Database } from "./database/database";
 import { stringToDate } from "./utils";
 import { DatabaseMutex } from "./database/database.mutex";
 import { DatabaseModule } from "./database/database.module";
 import { EventModule, MoxyEventEmitter } from "./event";
+import { ConfigService, DatabaseConfig, UserConfig } from "./config";
 
 export type IUserStats = {
   key: string;
@@ -73,19 +68,12 @@ export class User {
 
 @Injectable()
 export class UserStatsService {
-  private readonly logger = new Logger("UserStatsService");
-
   public constructor(
     @Inject("Database")
     private readonly database: Database,
-    private readonly eventEmitter: MoxyEventEmitter,
     @Inject("DatabaseMutex")
     private readonly mutex: DatabaseMutex
-  ) {
-    this.eventEmitter.on("traffic", (...args) =>
-      this.handleNewTrafficEvent(...args)
-    );
-  }
+  ) {}
 
   public get(userKey: string) {
     return this.database.get(userKey);
@@ -106,11 +94,11 @@ export class UserStatsService {
   public async update(userKey: string, update: Partial<IUserStats>) {
     return this.withLock(
       userKey,
-      async () => await this._update(userKey, update)
+      async () => await this.updateWithNoLock(userKey, update)
     );
   }
 
-  private async _update(userKey: string, update: Partial<IUserStats>) {
+  public async updateWithNoLock(userKey: string, update: Partial<IUserStats>) {
     const stats = await this.database.get(userKey);
 
     Object.keys(update).forEach((key) => {
@@ -121,25 +109,6 @@ export class UserStatsService {
 
     await this.database.set(userKey, stats);
     return stats.clone();
-  }
-
-  private async handleNewTrafficEvent(
-    type: "up" | "down",
-    userKey: string,
-    amount: number
-  ) {
-    await this.withLock(userKey, async () => {
-      try {
-        const stats = await this.get(userKey);
-        const update: Partial<IUserStats> =
-          type === "up"
-            ? { up: stats.up + amount }
-            : { down: stats.down + amount };
-        await this._update(userKey, update);
-      } catch (err) {
-        this.logger.error(err instanceof Error ? err.message : err);
-      }
-    });
   }
 
   private withLock<T>(userKey: string, fn: () => Promise<T>) {
@@ -157,21 +126,108 @@ export class UserFactory {
     private readonly statsService: UserStatsService
   ) {}
 
+  public async getFromUserConfig(userConfig: UserConfig) {
+    const stats = await this.statsService.get(userConfig.key);
+
+    return new User(userConfig, stats);
+  }
+
   public async get(userKey: string): Promise<User> {
     const config = await this.configService.getConfig();
     const userConfig = config.users[userKey];
     if (!userConfig) throw new Error(`no config found for user ${userKey}`);
 
-    const stats = await this.statsService.get(userKey);
+    return this.getFromUserConfig(userConfig);
+  }
+}
 
-    return new User(userConfig, stats);
+@Injectable()
+export class UserWatcher {
+  private readonly logger = new Logger("UserWatcher");
+  private readonly lastStatus: Record<string, boolean> = {};
+
+  public constructor(
+    private readonly eventEmitter: MoxyEventEmitter,
+    private readonly userFactory: UserFactory,
+    @Inject("DatabaseMutex")
+    private readonly mutex: DatabaseMutex,
+    private readonly userStats: UserStatsService
+  ) {
+    this.eventEmitter.on("new-user", (user) =>
+      this.handleNewUser(user).catch((err) => this.logger.error(err))
+    );
+    this.eventEmitter.on("update-user", ({ key: userKey }) =>
+      this.handleUserUpdate(userKey).catch((err) => this.logger.error(err))
+    );
+    // TODO: add reset traffic event here
+    this.eventEmitter.on("traffic", (...args) =>
+      this.handleNewTraffic(...args).catch((err) => this.logger.error(err))
+    );
+    this.eventEmitter.on("disable-user", (userKey) => {
+      this.logger.log(`User ${userKey} disabled`);
+    });
+    this.eventEmitter.on("enable-user", (userKey) => {
+      this.logger.log(`User ${userKey} enabled`);
+    });
+  }
+
+  private async handleNewUser(userConfig: UserConfig) {
+    await this.userStats.assert(userConfig.key);
+    const user = await this.userFactory.get(userConfig.key);
+    this.lastStatus[userConfig.key] = user.isEnabled();
+  }
+
+  private async handleUserUpdate(userKey: string) {
+    await this.userStats.assert(userKey);
+    const user = await this.userFactory.get(userKey);
+    const wasDisabled = !this.lastStatus[userKey];
+
+    if (wasDisabled && user.isEnabled())
+      this.eventEmitter.emit("enable-user", userKey);
+
+    this.lastStatus[userKey] = user.isEnabled();
+  }
+
+  private async handleNewTraffic(
+    type: "up" | "down",
+    userKey: string,
+    amount: number
+  ) {
+    await this.withLock(userKey, async () => {
+      try {
+        const stats = await this.userStats.get(userKey);
+        const update: Partial<IUserStats> =
+          type === "up"
+            ? { up: stats.up + amount }
+            : { down: stats.down + amount };
+        await this.userStats.updateWithNoLock(userKey, update);
+      } catch (err) {
+        this.logger.error(err);
+      }
+    });
+
+    await this.userStats.assert(userKey);
+    const user = await this.userFactory.get(userKey);
+    const wasEnabled = this.lastStatus[userKey];
+
+    if (wasEnabled && !user.isEnabled())
+      this.eventEmitter.emit("disable-user", userKey);
+
+    this.lastStatus[userKey] = user.isEnabled();
+  }
+
+  private withLock<T>(userKey: string, fn: () => Promise<T>) {
+    return this.mutex
+      .acquire(userKey)
+      .then(fn)
+      .finally(() => this.mutex.release(userKey));
   }
 }
 
 @Module({
   imports: [EventModule],
   exports: [UserStatsService, UserFactory],
-  providers: [UserStatsService, UserFactory],
+  providers: [UserStatsService, UserFactory, UserWatcher],
 })
 export class UserModule {
   public static register(
