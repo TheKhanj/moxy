@@ -8,6 +8,7 @@ import { UserModule } from "./user";
 import { ProxyModule } from "./proxy";
 import { DatabaseModule } from "./database/database.module";
 import { ConfigModule, ConfigService } from "./config";
+import { readFileSync } from "node:fs";
 
 @Module({})
 export class AppModule {
@@ -63,7 +64,12 @@ async function runDaemon(config: string) {
 }
 
 export async function main() {
-  const argv = minimist(process.argv);
+  const argv = minimist(process.argv, {
+    boolean: ["version", "v"],
+  });
+
+  if (argv.v || argv.version) showVersion();
+
   const parts = process.argv.slice(2);
   switch (parts[0]) {
     case "user":
@@ -92,6 +98,12 @@ function parseSchema<T extends z.ZodTypeAny>(
   if (!res.success) help();
 
   return res.data;
+}
+
+function showVersion() {
+  const { version } = JSON.parse(readFileSync("package.json").toString());
+  console.log(`Version: ${version}`);
+  process.exit(1);
 }
 
 function help(): never {
