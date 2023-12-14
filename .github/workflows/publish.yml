@@ -1,0 +1,39 @@
+name: Publish NPM Package
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Compare versions
+        id: compare-versions
+        run: |
+          version=$(node -p "require('./package.json').version")
+          latest=$(npm show moxyjs version || echo -n 0.0.0)
+
+          echo "current branch version: $version, current upstream version: $latest"
+
+          echo "should-publish=$([[ $version > $latest ]] && echo -n 'true' || echo -n 'false')" >> $GITHUB_OUTPUT
+
+      - run: npm publish
+        name: Publish to npm
+        if: steps.compare-versions.outputs.should-publish == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
