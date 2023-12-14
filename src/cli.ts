@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { z } from "zod";
 import minimist from "minimist";
 import { NestFactory } from "@nestjs/core";
