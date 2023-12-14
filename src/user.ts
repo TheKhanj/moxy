@@ -23,7 +23,7 @@ export class UserStats implements IUserStats {
   public constructor(
     public key: string,
     public up: number,
-    public down: number
+    public down: number,
   ) {}
 
   public static create(from: IUserStats) {
@@ -50,7 +50,7 @@ export class UserStats implements IUserStats {
 export class User {
   public constructor(
     public readonly config: UserConfig,
-    public readonly stats: UserStats
+    public readonly stats: UserStats,
   ) {}
 
   public isEnabled() {
@@ -72,7 +72,7 @@ export class UserStatsService {
     @Inject("Database")
     private readonly database: Database,
     @Inject("DatabaseMutex")
-    private readonly mutex: DatabaseMutex
+    private readonly mutex: DatabaseMutex,
   ) {}
 
   public get(userKey: string) {
@@ -94,7 +94,7 @@ export class UserStatsService {
   public async update(userKey: string, update: Partial<IUserStats>) {
     return this.withLock(
       userKey,
-      async () => await this.updateWithNoLock(userKey, update)
+      async () => await this.updateWithNoLock(userKey, update),
     );
   }
 
@@ -123,7 +123,7 @@ export class UserStatsService {
 export class UserFactory {
   public constructor(
     private readonly configService: ConfigService,
-    private readonly statsService: UserStatsService
+    private readonly statsService: UserStatsService,
   ) {}
 
   public async getFromUserConfig(userConfig: UserConfig) {
@@ -151,17 +151,22 @@ export class UserWatcher {
     private readonly userFactory: UserFactory,
     @Inject("DatabaseMutex")
     private readonly mutex: DatabaseMutex,
-    private readonly userStats: UserStatsService
+    private readonly userStats: UserStatsService,
   ) {
     this.eventEmitter.on("new-user", (user) =>
-      this.handleNewUser(user).catch((err) => this.logger.error(err))
+      this.handleNewUser(user).catch((err) => this.logger.error(err)),
     );
     this.eventEmitter.on("update-user", ({ key: userKey }) =>
-      this.handleUserUpdate(userKey).catch((err) => this.logger.error(err))
+      this.handleUserUpdate(userKey).catch((err) => this.logger.error(err)),
     );
+    this.eventEmitter.on("delete-user", (userKey) => {
+      delete this.lastStatus[userKey];
+      if (!!this.lastStatus[userKey])
+        this.eventEmitter.emit("disable-user", userKey);
+    });
     // TODO: add reset traffic event here
     this.eventEmitter.on("traffic", (...args) =>
-      this.handleNewTraffic(...args).catch((err) => this.logger.error(err))
+      this.handleNewTraffic(...args).catch((err) => this.logger.error(err)),
     );
     this.eventEmitter.on("disable-user", (userKey) => {
       this.logger.log(`User ${userKey} disabled`);
@@ -175,6 +180,7 @@ export class UserWatcher {
     await this.userStats.assert(userConfig.key);
     const user = await this.userFactory.get(userConfig.key);
     this.lastStatus[userConfig.key] = user.isEnabled();
+    if (user.isEnabled()) this.eventEmitter.emit("enable-user", userConfig.key);
   }
 
   private async handleUserUpdate(userKey: string) {
@@ -185,13 +191,16 @@ export class UserWatcher {
     if (wasDisabled && user.isEnabled())
       this.eventEmitter.emit("enable-user", userKey);
 
+    if (!wasDisabled && !user.isEnabled())
+      this.eventEmitter.emit("disable-user", userKey);
+
     this.lastStatus[userKey] = user.isEnabled();
   }
 
   private async handleNewTraffic(
     type: "up" | "down",
     userKey: string,
-    amount: number
+    amount: number,
   ) {
     await this.withLock(userKey, async () => {
       try {
@@ -232,7 +241,7 @@ export class UserWatcher {
 export class UserModule {
   public static register(
     configModule: DynamicModule,
-    databaseConfig: DatabaseConfig
+    databaseConfig: DatabaseConfig,
   ): DynamicModule {
     return {
       module: UserModule,

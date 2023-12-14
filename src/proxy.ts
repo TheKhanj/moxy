@@ -8,9 +8,9 @@ import {
 import * as net from "net";
 import { Transform } from "node:stream";
 
-import { UserFactory, UserStatsService } from "./user";
 import { withErrorLogging } from "./utils";
 import { ProxyConfig, UserProxyConfig } from "./config";
+import { UserFactory, UserStatsService } from "./user";
 import { EventModule, MoxyEventEmitter } from "./event";
 
 interface Proxy {
@@ -28,7 +28,7 @@ class TcpProxy implements Proxy {
     private readonly forwardingPort: number,
     private readonly forwardingAddress: string,
     private readonly eventEmmiter: MoxyEventEmitter,
-    private readonly counterFlushTimeout: number
+    private readonly counterFlushTimeout: number,
   ) {
     this.server = this.getServer();
   }
@@ -37,7 +37,7 @@ class TcpProxy implements Proxy {
     return new Promise<void>((res, rej) => {
       const server = this.server.listen(this.listeningPort, () => {
         this.logger.log(
-          `Started tcp proxy ${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`
+          `Started tcp proxy ${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`,
         );
         res();
       });
@@ -50,7 +50,7 @@ class TcpProxy implements Proxy {
       this.server.close((err) => {
         if (err) rej(err);
         this.logger.log(
-          `Destroyed tcp proxy ${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`
+          `Destroyed tcp proxy ${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`,
         );
         res();
       });
@@ -70,14 +70,14 @@ class TcpProxy implements Proxy {
             this.eventEmmiter,
             "up",
             this.userKey,
-            this.counterFlushTimeout
+            this.counterFlushTimeout,
           );
 
           const downCounter = createCounterStream(
             this.eventEmmiter,
             "down",
             this.userKey,
-            this.counterFlushTimeout
+            this.counterFlushTimeout,
           );
 
           clientSocket.pipe(upCounter);
@@ -85,7 +85,7 @@ class TcpProxy implements Proxy {
 
           forwardSocket.pipe(downCounter);
           downCounter.pipe(clientSocket);
-        }
+        },
       );
 
       clientSocket.on("close", () => {
@@ -112,38 +112,28 @@ export class ProxyStorage {
   private readonly logger = new Logger("ProxyStorage");
 
   public constructor(
-    private readonly eventEmiter: MoxyEventEmitter,
+    private readonly eventEmitter: MoxyEventEmitter,
     @Inject("CounterFlushTimeout")
     private readonly counterTimeout: number,
     userFactory: UserFactory,
-    userStatsService: UserStatsService
+    userStatsService: UserStatsService,
   ) {
-    this.eventEmiter.on("new-user", (userConfig) =>
-      withErrorLogging(async () => {
-        await userStatsService.assert(userConfig.key);
-        const user = await userFactory.get(userConfig.key);
-        if (!user.isEnabled()) return;
-        await this.add(user.config.key, user.config.proxy);
-      }, this.logger)
-    );
-    this.eventEmiter.on("enable-user", (userKey) =>
+    this.eventEmitter.on("enable-user", (userKey) =>
       withErrorLogging(async () => {
         await userStatsService.assert(userKey);
         const user = await userFactory.get(userKey);
+        if (!user.isEnabled()) return;
         await this.add(user.config.key, user.config.proxy);
-      }, this.logger)
+      }, this.logger),
     );
-    this.eventEmiter.on("delete-user", (userKey) => {
-      this.delete(userKey).catch((err) => this.logger.error(err));
-    });
-    this.eventEmiter.on("disable-user", (userKey) =>
+    this.eventEmitter.on("disable-user", (userKey) =>
       withErrorLogging(async () => {
         await userStatsService.assert(userKey);
         const user = await userFactory.get(userKey);
         await this.delete(user.config.key);
-      }, this.logger)
+      }, this.logger),
     );
-    this.eventEmiter.on("update-user", (prev, curr) =>
+    this.eventEmitter.on("update-user", (prev, curr) =>
       withErrorLogging(async () => {
         const changedConfig =
           JSON.stringify(prev.proxy) !== JSON.stringify(curr.proxy);
@@ -151,11 +141,11 @@ export class ProxyStorage {
         await userStatsService.assert(curr.key);
         const user = await userFactory.get(curr.key);
         await this.delete(user.config.key).catch((err) =>
-          this.logger.warn(err)
+          this.logger.warn(err),
         );
         if (!user.isEnabled()) return;
         await this.add(user.config.key, user.config.proxy);
-      }, this.logger)
+      }, this.logger),
     );
   }
 
@@ -168,13 +158,13 @@ export class ProxyStorage {
           config.listeningPort,
           config.forwardingPort,
           config.forwardingAddress,
-          this.eventEmiter,
-          this.counterTimeout
+          this.eventEmitter,
+          this.counterTimeout,
         );
         break;
       default:
         throw new Error(
-          `No implementation is available for ${config.protocol} proxy`
+          `No implementation is available for ${config.protocol} proxy`,
         );
     }
 
@@ -204,7 +194,7 @@ function createCounterStream(
   eventEmitter: MoxyEventEmitter,
   type: "up" | "down",
   userKey: string,
-  timeout: number
+  timeout: number,
 ) {
   let length = 0;
   let flushTimeout: NodeJS.Timeout | null = null;
@@ -244,7 +234,7 @@ export class ProxyModule {
   public static register(
     config: ProxyConfig,
     configModule: DynamicModule,
-    userModule: DynamicModule
+    userModule: DynamicModule,
   ): DynamicModule {
     return {
       module: ProxyModule,
