@@ -136,11 +136,11 @@ export class ConfigService {
         })
       : [];
 
-    newUsersKeys.forEach((newUserKey) =>
-      this.eventEmitter.emit("new-user", newConfig.users[newUserKey])
-    );
     deletedUsersKeys.forEach((deletedUserKey) =>
       this.eventEmitter.emit("delete-user", deletedUserKey)
+    );
+    newUsersKeys.forEach((newUserKey) =>
+      this.eventEmitter.emit("new-user", newConfig.users[newUserKey])
     );
     updatedUsersKeys.forEach((changedUserKey) => {
       assert.ok(oldConfig);
