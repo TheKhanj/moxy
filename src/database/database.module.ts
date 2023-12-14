@@ -8,10 +8,10 @@ import {
   OnApplicationShutdown,
 } from "@nestjs/common";
 
-import { DatabaseMutex, LocalDatabaseMutex } from "./database.mutex";
-import { Database, MemoryDatabase, PatcherDatabase } from "./database";
-import { DatabaseConfig, DatabaseDriverConfig } from "../config";
+import { LocalDatabaseMutex } from "./database.mutex";
 import { MongoDbDatabaseModule } from "./mongodb.database";
+import { MemoryDatabase, PatcherDatabase } from "./database";
+import { DatabaseConfig, DatabaseDriverConfig } from "../config";
 
 const logger = new Logger("Database");
 

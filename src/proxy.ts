@@ -89,9 +89,7 @@ class TcpProxy implements Proxy {
       );
 
       clientSocket.on("close", () => {
-        this.logger.log(
-          `Client disconnected: ${clientSocket.remoteAddress}:${clientSocket.remotePort}`
-        );
+        this.logger.log(`Client disconnected`);
         forwardSocket.end();
       });
 

@@ -39,9 +39,7 @@
                 }
               },
               "required": [
-                "type",
-                "url",
-                "databaseName"
+                "type"
               ]
             },
             {
