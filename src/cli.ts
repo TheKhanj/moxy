@@ -114,7 +114,7 @@ USAGE:
 
     user passthrough (enable|disable|toggle)
 
-    daemon [-c moxy.json]`
+    run [-c moxy.json]`
   );
   process.exit(1);
 }
