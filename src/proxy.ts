@@ -39,9 +39,7 @@ class TcpProxy implements Proxy {
   public listen() {
     return new Promise<void>((res, rej) => {
       const server = this.server.listen(this.listeningPort, () => {
-        this.logger.log(
-          `Started tcp proxy`
-        );
+        this.logger.log("Started tcp proxy");
         res();
       });
       server.on("error", rej);
@@ -52,9 +50,7 @@ class TcpProxy implements Proxy {
     return new Promise<void>((res, rej) => {
       this.server.close((err) => {
         if (err) rej(err);
-        this.logger.log(
-          `Destroyed tcp proxy`
-        );
+        this.logger.log("Destroyed tcp proxy");
         res();
       });
     });
@@ -67,7 +63,7 @@ class TcpProxy implements Proxy {
         this.forwardingPort,
         this.forwardingAddress,
         () => {
-          this.logger.log(`Connected to forward port`);
+          this.logger.log("Connected to forward port");
 
           const upCounter = createCounterStream(
             this.eventEmmiter,
@@ -92,12 +88,17 @@ class TcpProxy implements Proxy {
       );
 
       clientSocket.on("close", () => {
-        this.logger.log(`Client disconnected`);
+        this.logger.log("Client disconnected");
         forwardSocket.end();
       });
 
       clientSocket.on("error", (err) => {
         this.logger.error(`Client socket error: ${err}`);
+        clientSocket.destroy();
+      });
+
+      forwardSocket.on("close", () => {
+        this.logger.log("Forward disconnected");
       });
 
       forwardSocket.on("error", (err) => {
