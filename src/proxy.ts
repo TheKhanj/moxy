@@ -19,7 +19,7 @@ interface Proxy {
 }
 
 class TcpProxy implements Proxy {
-  private readonly logger = new Logger("TcpProxy");
+  private readonly logger: Logger;
   private readonly server: net.Server;
 
   public constructor(
@@ -28,8 +28,11 @@ class TcpProxy implements Proxy {
     private readonly forwardingPort: number,
     private readonly forwardingAddress: string,
     private readonly eventEmmiter: MoxyEventEmitter,
-    private readonly counterFlushTimeout: number,
+    private readonly counterFlushTimeout: number
   ) {
+    this.logger = new Logger(
+      `TcpProxy :${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`
+    );
     this.server = this.getServer();
   }
 
@@ -37,7 +40,7 @@ class TcpProxy implements Proxy {
     return new Promise<void>((res, rej) => {
       const server = this.server.listen(this.listeningPort, () => {
         this.logger.log(
-          `Started tcp proxy ${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`,
+          `Started tcp proxy`
         );
         res();
       });
@@ -50,7 +53,7 @@ class TcpProxy implements Proxy {
       this.server.close((err) => {
         if (err) rej(err);
         this.logger.log(
-          `Destroyed tcp proxy ${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`,
+          `Destroyed tcp proxy`
         );
         res();
       });
@@ -64,20 +67,20 @@ class TcpProxy implements Proxy {
         this.forwardingPort,
         this.forwardingAddress,
         () => {
-          this.logger.log(`Connected to forward port: ${this.forwardingPort}`);
+          this.logger.log(`Connected to forward port`);
 
           const upCounter = createCounterStream(
             this.eventEmmiter,
             "up",
             this.userKey,
-            this.counterFlushTimeout,
+            this.counterFlushTimeout
           );
 
           const downCounter = createCounterStream(
             this.eventEmmiter,
             "down",
             this.userKey,
-            this.counterFlushTimeout,
+            this.counterFlushTimeout
           );
 
           clientSocket.pipe(upCounter);
@@ -85,7 +88,7 @@ class TcpProxy implements Proxy {
 
           forwardSocket.pipe(downCounter);
           downCounter.pipe(clientSocket);
-        },
+        }
       );
 
       clientSocket.on("close", () => {
@@ -116,7 +119,7 @@ export class ProxyStorage {
     @Inject("CounterFlushTimeout")
     private readonly counterTimeout: number,
     userFactory: UserFactory,
-    userStatsService: UserStatsService,
+    userStatsService: UserStatsService
   ) {
     this.eventEmitter.on("enable-user", (userKey) =>
       withErrorLogging(async () => {
@@ -124,14 +127,14 @@ export class ProxyStorage {
         const user = await userFactory.get(userKey);
         if (!user.isEnabled()) return;
         await this.add(user.config.key, user.config.proxy);
-      }, this.logger),
+      }, this.logger)
     );
     this.eventEmitter.on("disable-user", (userKey) =>
       withErrorLogging(async () => {
         await userStatsService.assert(userKey);
         const user = await userFactory.get(userKey);
         await this.delete(user.config.key);
-      }, this.logger),
+      }, this.logger)
     );
     this.eventEmitter.on("update-user", (prev, curr) =>
       withErrorLogging(async () => {
@@ -141,11 +144,11 @@ export class ProxyStorage {
         await userStatsService.assert(curr.key);
         const user = await userFactory.get(curr.key);
         await this.delete(user.config.key).catch((err) =>
-          this.logger.warn(err),
+          this.logger.warn(err)
         );
         if (!user.isEnabled()) return;
         await this.add(user.config.key, user.config.proxy);
-      }, this.logger),
+      }, this.logger)
     );
   }
 
@@ -159,12 +162,12 @@ export class ProxyStorage {
           config.forwardingPort,
           config.forwardingAddress,
           this.eventEmitter,
-          this.counterTimeout,
+          this.counterTimeout
         );
         break;
       default:
         throw new Error(
-          `No implementation is available for ${config.protocol} proxy`,
+          `No implementation is available for ${config.protocol} proxy`
         );
     }
 
@@ -194,7 +197,7 @@ function createCounterStream(
   eventEmitter: MoxyEventEmitter,
   type: "up" | "down",
   userKey: string,
-  timeout: number,
+  timeout: number
 ) {
   let length = 0;
   let flushTimeout: NodeJS.Timeout | null = null;
@@ -234,7 +237,7 @@ export class ProxyModule {
   public static register(
     config: ProxyConfig,
     configModule: DynamicModule,
-    userModule: DynamicModule,
+    userModule: DynamicModule
   ): DynamicModule {
     return {
       module: ProxyModule,

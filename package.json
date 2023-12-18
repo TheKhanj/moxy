@@ -1,6 +1,6 @@
 {
   "name": "moxyjs",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Distributed transparent proxy with traffic control facilities",
   "author": "Pooyan Khanjankhani <pooyankhan@gmail.com>",
   "license": "MIT",
