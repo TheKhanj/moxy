@@ -57,8 +57,13 @@ class TcpProxy implements Proxy {
   }
 
   private getServer() {
-    return net.createServer((clientSocket) => {
+    function handleClient(this: TcpProxy, clientSocket: net.Socket) {
       // TODO: add recovery mechanism
+      const retryConnection = () => {
+        this.logger.log(`Retrying connection in ${500 / 1000} seconds...`);
+        setTimeout(() => handleClient.bind(this)(clientSocket), 500);
+      };
+
       const forwardSocket = net.createConnection(
         this.forwardingPort,
         this.forwardingAddress,
@@ -93,8 +98,13 @@ class TcpProxy implements Proxy {
       });
 
       clientSocket.on("error", (err) => {
-        this.logger.error(`Client socket error: ${err}`);
-        clientSocket.destroy();
+        if ((err as any).code === "ECONNRESET") {
+          this.logger.log("Local socket connection reset. Retrying...");
+          retryConnection();
+        } else {
+          this.logger.error("Local socket error:", err);
+          clientSocket.destroy();
+        }
       });
 
       forwardSocket.on("close", () => {
@@ -105,7 +115,9 @@ class TcpProxy implements Proxy {
         this.logger.error(`Forward socket error: ${err}`);
         clientSocket.destroy();
       });
-    });
+    }
+
+    return net.createServer(handleClient.bind(this));
   }
 }
 
