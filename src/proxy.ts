@@ -103,7 +103,7 @@ class TcpProxy implements Proxy {
           retryConnection();
         } else {
           this.logger.error("Local socket error:", err);
-          clientSocket.destroy();
+          clientSocket.end();
         }
       });
 
@@ -113,7 +113,7 @@ class TcpProxy implements Proxy {
 
       forwardSocket.on("error", (err) => {
         this.logger.error(`Forward socket error: ${err}`);
-        clientSocket.destroy();
+        clientSocket.end();
       });
     }
 
