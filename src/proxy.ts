@@ -95,6 +95,10 @@ class TcpProxy implements Proxy {
       clientSocket.on("close", () => {
         this.logger.log("Client disconnected");
         forwardSocket.end();
+        setTimeout(() => {
+          if (forwardSocket.destroyed) return;
+          forwardSocket.destroy();
+        }, 10_000);
       });
 
       clientSocket.on("error", (err) => {
@@ -104,6 +108,10 @@ class TcpProxy implements Proxy {
         } else {
           this.logger.error("Local socket error:", err);
           clientSocket.end();
+          setTimeout(() => {
+            if (clientSocket.destroyed) return;
+            clientSocket.destroy();
+          }, 10_000);
         }
       });
 
@@ -114,6 +122,10 @@ class TcpProxy implements Proxy {
       forwardSocket.on("error", (err) => {
         this.logger.error(`Forward socket error: ${err}`);
         clientSocket.end();
+        setTimeout(() => {
+          if (clientSocket.destroyed) return;
+          clientSocket.destroy();
+        }, 10_000);
       });
     }
 
