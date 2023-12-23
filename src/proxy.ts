@@ -28,7 +28,8 @@ class TcpProxy implements Proxy {
     private readonly forwardingPort: number,
     private readonly forwardingAddress: string,
     private readonly eventEmmiter: MoxyEventEmitter,
-    private readonly counterFlushTimeout: number
+    private readonly counterFlushTimeout: number,
+    private readonly socketTimeout: number
   ) {
     this.logger = new Logger(
       `TcpProxy :${this.listeningPort} -> ${this.forwardingAddress}:${this.forwardingPort}`
@@ -92,13 +93,12 @@ class TcpProxy implements Proxy {
         }
       );
 
+      forwardSocket.setTimeout(this.socketTimeout);
+      clientSocket.setTimeout(this.socketTimeout);
+
       clientSocket.on("close", () => {
         this.logger.log("Client disconnected");
         forwardSocket.end();
-        setTimeout(() => {
-          if (forwardSocket.destroyed) return;
-          forwardSocket.destroy();
-        }, 10_000);
       });
 
       clientSocket.on("error", (err) => {
@@ -108,10 +108,6 @@ class TcpProxy implements Proxy {
         } else {
           this.logger.error("Local socket error:", err);
           clientSocket.end();
-          setTimeout(() => {
-            if (clientSocket.destroyed) return;
-            clientSocket.destroy();
-          }, 10_000);
         }
       });
 
@@ -141,8 +137,6 @@ export class ProxyStorage {
 
   public constructor(
     private readonly eventEmitter: MoxyEventEmitter,
-    @Inject("CounterFlushTimeout")
-    private readonly counterTimeout: number,
     userFactory: UserFactory,
     userStatsService: UserStatsService
   ) {
@@ -187,7 +181,8 @@ export class ProxyStorage {
           config.forwardingPort,
           config.forwardingAddress,
           this.eventEmitter,
-          this.counterTimeout
+          config.flushInterval,
+          config.socketTimeout
         );
         break;
       default:
@@ -260,19 +255,12 @@ function createCounterStream(
 })
 export class ProxyModule {
   public static register(
-    config: ProxyConfig,
     configModule: DynamicModule,
     userModule: DynamicModule
   ): DynamicModule {
     return {
       module: ProxyModule,
       imports: [configModule, userModule],
-      providers: [
-        {
-          provide: "CounterFlushTimeout",
-          useValue: config.counter.flushTimeout,
-        },
-      ],
     };
   }
 }

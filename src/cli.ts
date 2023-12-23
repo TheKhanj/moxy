@@ -22,7 +22,7 @@ export class AppModule {
         configModule,
         userModule,
         DatabaseModule.register(config.database),
-        ProxyModule.register(config.proxy, configModule, userModule),
+        ProxyModule.register(configModule, userModule),
       ],
     };
   }

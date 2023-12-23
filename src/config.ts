@@ -20,6 +20,8 @@ export type UserTcpProxyConfig = {
   listeningPort: number;
   forwardingPort: number;
   forwardingAddress: string;
+  flushInterval: number;
+  socketTimeout: number;
 };
 
 export type UserProxyConfig = UserTcpProxyConfig;
@@ -38,6 +40,7 @@ export type MongoDbDatabaseDriverConfig = {
   url: string;
   databaseName: string;
 };
+
 export type MemoryDatabaseDriverConfig = {
   type: "memory";
 };
@@ -72,7 +75,6 @@ export type ProxyConfig = {
 
 export type Config = {
   ttl: number;
-  proxy: ProxyConfig;
   database: DatabaseConfig;
   users: Record<string, UserConfig>;
 };
@@ -93,9 +95,11 @@ export class ConfigService {
     const json = JSON.parse(content.toString());
 
     const parsed = ConfigSchema.parse(json);
+
     Object.keys(parsed.users).forEach((key) => {
       parsed.users[key].key = key;
     });
+
     return parsed;
   }
 

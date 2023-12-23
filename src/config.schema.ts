@@ -12,6 +12,8 @@ const UserTcpProxyConfigSchema = z.object({
   listeningPort: z.number(),
   forwardingPort: z.number(),
   forwardingAddress: z.string().default("0.0.0.0"),
+  flushInterval: z.number().default(10_000),
+  socketTimeout: z.number().default(60_000),
 });
 
 const UserProxyConfigSchema = z.union([UserTcpProxyConfigSchema, z.never()]);
@@ -69,19 +71,8 @@ const DatabaseConfigSchema = z
   })
   .default({});
 
-const ProxyConfigSchema = z
-  .object({
-    counter: z
-      .object({
-        flushTimeout: z.number().default(10_000),
-      })
-      .default({}),
-  })
-  .default({});
-
 export const ConfigSchema = z.object({
   ttl: z.number().default(5 * 60_000),
-  proxy: ProxyConfigSchema,
   database: DatabaseConfigSchema,
   users: z.record(UserConfigSchema),
 });
