@@ -1,11 +1,11 @@
 import {
   DynamicModule,
-  Inject,
   Injectable,
   Logger,
   Module,
   OnApplicationBootstrap,
 } from "@nestjs/common";
+import * as fsp from "node:fs/promises";
 import * as assert from "node:assert";
 import { readFile } from "node:fs";
 import { promisify } from "node:util";
@@ -13,6 +13,7 @@ import { promisify } from "node:util";
 import { ConfigSchema } from "./config.schema";
 import { EventModule, MoxyEventEmitter } from "./event";
 import { UserNotFoundError } from "./errors";
+import { withErrorLogging } from "./utils";
 
 export type ExpirationDate = "unlimit" | string;
 
@@ -68,7 +69,7 @@ export type ProxyConfig = {
 };
 
 export type Config = {
-  ttl: number;
+  pidFile: string;
   database: DatabaseConfig;
   users: Record<string, UserConfig>;
 };
@@ -82,7 +83,12 @@ export class ConfigService {
   public constructor(
     private readonly file: string,
     private readonly eventEmitter: MoxyEventEmitter
-  ) {}
+  ) {
+    process.on("SIGHUP", () => {
+      this.logger.log("Reloading config");
+      this.reloadCache().catch((err) => this.logger.error(err));
+    });
+  }
 
   public static async readConfig(file: string): Promise<Config> {
     const content = await promisify(readFile)(file);
@@ -109,16 +115,16 @@ export class ConfigService {
   public async getConfig(): Promise<Config> {
     if (this.cache) return this.cache;
 
-    return this.refreshCache();
+    return this.reloadCache();
   }
 
-  public async refreshCache(): Promise<Config> {
+  private async reloadCache(): Promise<Config> {
     this.oldCache = this.cache;
     this.cache = await ConfigService.readConfig(this.file);
 
     await this.emitChangeEvents(this.cache, this.oldCache);
 
-    this.logger.log("Refreshed config cache");
+    this.logger.log("Reloaded config");
 
     return this.cache;
   }
@@ -167,27 +173,20 @@ export class ConfigService {
 export class ConfigModule implements OnApplicationBootstrap {
   private readonly logger = new Logger("ConfigModule");
 
-  public constructor(
-    private readonly configService: ConfigService,
-    @Inject("CacheTtl")
-    private readonly ttl: number
-  ) {}
+  public constructor(private readonly configService: ConfigService) {}
 
   onApplicationBootstrap() {
-    this.configService.refreshCache().catch((err) => this.logger.error(err));
+    withErrorLogging(async () => {
+      const config = await this.configService.getConfig();
 
-    setInterval(() => {
-      this.configService.refreshCache().catch((err) => this.logger.error(err));
-    }, this.ttl);
+      await fsp.writeFile(config.pidFile, String(process.pid));
+    }, this.logger);
   }
 
   public static async register(file: string): Promise<DynamicModule> {
-    const config = await ConfigService.readConfig(file);
-
     return {
       module: ConfigModule,
       providers: [
-        { provide: "CacheTtl", useValue: config.ttl },
         {
           provide: ConfigService,
           inject: [MoxyEventEmitter],

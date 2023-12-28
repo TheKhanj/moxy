@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { z } from "zod";
 import minimist from "minimist";
+import { kill } from "node:process";
+import * as fsp from "node:fs/promises";
 import { NestFactory } from "@nestjs/core";
 import path, { dirname } from "node:path";
 import { DynamicModule, Module } from "@nestjs/common";
@@ -37,6 +39,14 @@ async function runDaemon(config: string) {
   await daemon.init();
 }
 
+async function sendSignal(config: string, signal: "reload") {
+  const c = await ConfigService.readConfig(config);
+
+  const content = await fsp.readFile(c.pidFile);
+  const pid = +content.toString();
+  kill(pid, "SIGHUP");
+}
+
 export async function main() {
   const argv = minimist(process.argv, {
     boolean: ["version", "v"],
@@ -46,10 +56,15 @@ export async function main() {
 
   const schema = z.object({
     config: z.string().default("moxy.json"),
+    signal: z.literal("reload").optional(),
   });
+
   const parsed = parseSchema(schema, {
     config: argv.config ?? argv.c,
+    signal: argv.signal ?? argv.s,
   });
+
+  if (parsed.signal) return sendSignal(parsed.config, parsed.signal);
 
   await runDaemon(parsed.config);
 }
@@ -81,8 +96,9 @@ function help(): never {
     moxy - Distributed transparent proxy with traffic control facilities
 
 USAGE:
-    [-c moxy.json]`
+    [-c moxy.json] [-s reload]`
   );
+
   process.exit(1);
 }
 

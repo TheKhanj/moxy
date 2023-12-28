@@ -60,7 +60,7 @@ const DatabaseConfigSchema = z
   .default({});
 
 export const ConfigSchema = z.object({
-  ttl: z.number().default(5 * 60_000),
+  pidFile: z.string().default("moxy.pid"),
   database: DatabaseConfigSchema,
   users: z.record(UserConfigSchema),
 });
