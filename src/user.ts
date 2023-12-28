@@ -111,9 +111,7 @@ export class UserFactory {
   }
 
   public async get(userKey: string): Promise<User> {
-    const config = await this.configService.getConfig();
-    const userConfig = config.users[userKey];
-    if (!userConfig) throw new Error(`no config found for user ${userKey}`);
+    const userConfig = await this.configService.getUser(userKey);
 
     return this.getFromUserConfig(userConfig);
   }
@@ -132,8 +130,8 @@ export class UserWatcher {
     this.eventEmitter.on("new-user", (user) =>
       this.handleNewUser(user).catch((err) => this.logger.error(err))
     );
-    this.eventEmitter.on("update-user", ({ key: userKey }) =>
-      this.handleUserUpdate(userKey).catch((err) => this.logger.error(err))
+    this.eventEmitter.on("update-user", (user) =>
+      this.handleUserUpdate(user).catch((err) => this.logger.error(err))
     );
     this.eventEmitter.on("delete-user", (userKey) => {
       delete this.lastStatus[userKey];
@@ -154,23 +152,22 @@ export class UserWatcher {
 
   private async handleNewUser(userConfig: UserConfig) {
     await this.userStats.assert(userConfig.key);
-    const user = await this.userFactory.get(userConfig.key);
+    const user = await this.userFactory.getFromUserConfig(userConfig);
     this.lastStatus[userConfig.key] = user.isEnabled();
     if (user.isEnabled()) this.eventEmitter.emit("enable-user", userConfig.key);
   }
 
-  private async handleUserUpdate(userKey: string) {
-    await this.userStats.assert(userKey);
-    const user = await this.userFactory.get(userKey);
-    const wasDisabled = !this.lastStatus[userKey];
+  private async handleUserUpdate(userConfig: UserConfig) {
+    const user = await this.userFactory.getFromUserConfig(userConfig);
+    const wasDisabled = !this.lastStatus[userConfig.key];
 
     if (wasDisabled && user.isEnabled())
-      this.eventEmitter.emit("enable-user", userKey);
+      this.eventEmitter.emit("enable-user", userConfig.key);
 
     if (!wasDisabled && !user.isEnabled())
-      this.eventEmitter.emit("disable-user", userKey);
+      this.eventEmitter.emit("disable-user", userConfig.key);
 
-    this.lastStatus[userKey] = user.isEnabled();
+    this.lastStatus[userConfig.key] = user.isEnabled();
   }
 
   private async handleNewTraffic(

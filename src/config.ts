@@ -12,6 +12,7 @@ import { promisify } from "node:util";
 
 import { ConfigSchema } from "./config.schema";
 import { EventModule, MoxyEventEmitter } from "./event";
+import { UserNotFoundError } from "./errors";
 
 export type ExpirationDate = "unlimit" | string;
 
@@ -94,6 +95,15 @@ export class ConfigService {
     });
 
     return parsed;
+  }
+
+  public async getUser(userKey: string): Promise<UserConfig> {
+    const config = await this.getConfig();
+    const userConfig = config.users[userKey];
+
+    if (!userConfig) throw new UserNotFoundError(userKey);
+
+    return userConfig;
   }
 
   public async getConfig(): Promise<Config> {
