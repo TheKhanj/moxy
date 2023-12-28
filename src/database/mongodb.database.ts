@@ -43,7 +43,7 @@ export class MongoDbDatabase implements Database {
   }
 
   public async inc(key: string, stats: UserStats): Promise<void> {
-    const res = await this.model.findOneAndUpdate(
+    await this.model.findOneAndUpdate(
       { key },
       {
         $inc: {
@@ -52,8 +52,6 @@ export class MongoDbDatabase implements Database {
         },
       }
     );
-
-    if (!res) throw new UserNotFoundError(key);
   }
 
   public async set(key: string, stats: UserStats): Promise<void> {

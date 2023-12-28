@@ -9,8 +9,8 @@ import {
 } from "@nestjs/common";
 
 import { MongoDbDatabaseModule } from "./mongodb.database";
-import { MemoryDatabase, PatcherDatabase } from "./database";
 import { DatabaseConfig, DatabaseDriverConfig } from "../config";
+import { FileDatabase, MemoryDatabase, PatcherDatabase } from "./database";
 
 const logger = new Logger("Database");
 
@@ -52,10 +52,15 @@ export class DatabaseModule
           ],
         };
       case "file":
-      default:
-        throw new Error(
-          `Database driver of type ${config.type} is not implemented`
-        );
+        return {
+          module: DatabaseModule,
+          providers: [
+            {
+              provide: "InternalDatabase",
+              useFactory: () => new FileDatabase(config.path),
+            },
+          ],
+        };
     }
   }
 

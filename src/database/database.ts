@@ -1,7 +1,10 @@
+import * as fs from "fs";
+import * as fsp from "fs/promises";
+import { promisify } from "util";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import { UserStats } from "../user";
 import { UserNotFoundError } from "../errors";
+import { IUserStats, UserStats } from "../user";
 
 export interface Database {
   get(key: string): Promise<UserStats>;
@@ -32,6 +35,61 @@ export class MemoryDatabase implements Database {
 
   public async set(key: string, stats: UserStats): Promise<void> {
     this.cache[key] = stats.clone();
+  }
+}
+
+type FileContent = IUserStats[];
+
+export class FileDatabase implements Database {
+  public constructor(private readonly filePath: string) {}
+
+  public async get(key: string): Promise<UserStats> {
+    const all = await this.getAll();
+    const found = all.find((stats) => stats.key === key);
+
+    if (!found) throw new UserNotFoundError(key);
+
+    return UserStats.create(found);
+  }
+
+  public async inc(key: string, stats: UserStats): Promise<void> {
+    const all = await this.getAll();
+    const found = all.find((stats) => stats.key === key);
+
+    if (!found) return this.set(key, stats);
+
+    found.up += stats.up;
+    found.down += stats.down;
+    await this.write(all);
+  }
+
+  public async set(key: string, stats: UserStats): Promise<void> {
+    const all = await this.getAll();
+    const found = all.find((stats) => stats.key === key);
+
+    if (!found) all.push(stats.toObject());
+    else {
+      found.up = stats.up;
+      found.down = stats.down;
+    }
+
+    await this.write(all);
+  }
+
+  private async write(content: FileContent) {
+    await fsp.writeFile(this.filePath, JSON.stringify(content, null, 2));
+  }
+
+  private async getAll(): Promise<FileContent> {
+    await this.assertFile();
+    const buffer = await fsp.readFile(this.filePath);
+    return JSON.parse(buffer.toString());
+  }
+
+  private async assertFile() {
+    const e = promisify(fs.exists);
+    if (await e(this.filePath)) return;
+    await fsp.writeFile(this.filePath, "[]");
   }
 }
 
