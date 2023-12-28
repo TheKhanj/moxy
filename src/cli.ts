@@ -29,33 +29,6 @@ export class AppModule {
   }
 }
 
-type UserId = {
-  type: "remark" | "key";
-  id: string;
-};
-
-async function createUser() {}
-
-async function getUser(id: UserId) {}
-
-async function getAllUsers() {}
-
-async function deleteUser(id: UserId) {}
-
-async function resetTraffic(id: UserId) {}
-
-async function addTraffic(id: UserId, amount: string) {}
-
-async function setTraffic(id: UserId, amount: string) {}
-
-async function setExpirationDate(id: UserId, date: string) {}
-
-async function addExpirationDate(id: UserId, amount: string) {}
-
-async function enablePassthrough(id: UserId) {}
-
-async function disablePassthrough(id: UserId) {}
-
 async function runDaemon(config: string) {
   const daemon = await NestFactory.createApplicationContext(
     AppModule.register(config)
@@ -71,23 +44,14 @@ export async function main() {
 
   if (argv.v || argv.version) showVersion();
 
-  const parts = process.argv.slice(2);
-  switch (parts[0]) {
-    case "user":
-      break;
-    case "run":
-      const schema = z.object({
-        config: z.string().default("moxy.json"),
-      });
-      const parsed = parseSchema(schema, {
-        config: argv.config ?? argv.c,
-      });
+  const schema = z.object({
+    config: z.string().default("moxy.json"),
+  });
+  const parsed = parseSchema(schema, {
+    config: argv.config ?? argv.c,
+  });
 
-      await runDaemon(parsed.config);
-      break;
-    default:
-      help();
-  }
+  await runDaemon(parsed.config);
 }
 
 function parseSchema<T extends z.ZodTypeAny>(
@@ -117,21 +81,7 @@ function help(): never {
     moxy - Distributed transparent proxy with traffic control facilities
 
 USAGE:
-    user create
-    user get [-k key] [-r remark]
-    user get-all
-    user delete [-k key] [-r remark]
-
-    user traffic reset [-k key] [-r remark]
-    user traffic add 50G [-k key] [-r remark]
-    user traffic set 50G [-k key] [-r remark]
-
-    user expiration-date set 2025-01-01
-    user expiration-date add 1 month
-
-    user passthrough (enable|disable|toggle)
-
-    run [-c moxy.json]`
+    [-c moxy.json]`
   );
   process.exit(1);
 }
