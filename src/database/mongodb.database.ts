@@ -9,6 +9,7 @@ import { Model } from "mongoose";
 import { DynamicModule, Injectable, Module } from "@nestjs/common";
 
 import { Database } from "./database";
+import { UserNotFoundError } from "../errors";
 import { IUserStats, UserStats } from "../user";
 import { MongoDbDatabaseDriverConfig } from "../config";
 
@@ -36,9 +37,23 @@ export class MongoDbDatabase implements Database {
       key,
     });
 
-    if (!doc) throw new Error(`User ${key} not found`);
+    if (!doc) throw new UserNotFoundError(key);
 
     return UserStats.create(doc.toObject());
+  }
+
+  public async inc(key: string, stats: UserStats): Promise<void> {
+    const res = await this.model.findOneAndUpdate(
+      { key },
+      {
+        $inc: {
+          down: stats.down,
+          up: stats.up,
+        },
+      }
+    );
+
+    if (!res) throw new UserNotFoundError(key);
   }
 
   public async set(key: string, stats: UserStats): Promise<void> {

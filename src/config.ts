@@ -55,15 +55,8 @@ export type DatabaseDriverConfig =
   | MemoryDatabaseDriverConfig
   | FileDatabaseDriverConfig;
 
-export type LocalDatabaseMutexConfig = {
-  type: "local";
-};
-
-export type DatabaseMutexConfig = LocalDatabaseMutexConfig;
-
 export type DatabaseConfig = {
   driver: DatabaseDriverConfig;
-  mutex: DatabaseMutexConfig;
   flush: number;
 };
 

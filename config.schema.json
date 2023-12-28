@@ -70,27 +70,6 @@
             }
           ]
         },
-        "mutex": {
-          "oneOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "const": "local"
-                }
-              },
-              "required": [
-                "type"
-              ]
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": {
-            "type": "local"
-          }
-        },
         "flush": {
           "type": "number"
         }

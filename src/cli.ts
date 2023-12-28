@@ -101,6 +101,7 @@ function parseSchema<T extends z.ZodTypeAny>(
 }
 
 function showVersion() {
+  // TODO: fix this
   const { version } = JSON.parse(readFileSync("package.json").toString());
   console.log(`Version: ${version}`);
   process.exit(1);

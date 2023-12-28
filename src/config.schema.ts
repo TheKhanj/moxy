@@ -53,20 +53,9 @@ const DatabaseDriverConfigSchema = z
     type: "memory",
   });
 
-const LocalDatabaseMutexConfigSchema = z.object({
-  type: z.literal("local"),
-});
-
-const DatabaseMutexConfigSchema = z
-  .union([LocalDatabaseMutexConfigSchema, z.never()])
-  .default({
-    type: "local",
-  });
-
 const DatabaseConfigSchema = z
   .object({
     driver: DatabaseDriverConfigSchema,
-    mutex: DatabaseMutexConfigSchema,
     flush: z.number().default(10_000),
   })
   .default({});

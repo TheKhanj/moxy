@@ -8,7 +8,6 @@ import {
   OnApplicationShutdown,
 } from "@nestjs/common";
 
-import { LocalDatabaseMutex } from "./database.mutex";
 import { MongoDbDatabaseModule } from "./mongodb.database";
 import { MemoryDatabase, PatcherDatabase } from "./database";
 import { DatabaseConfig, DatabaseDriverConfig } from "../config";
@@ -17,7 +16,7 @@ const logger = new Logger("Database");
 
 @Global()
 @Module({
-  exports: ["Database", "DatabaseMutex"],
+  exports: ["Database"],
   providers: [
     {
       provide: "Database",
@@ -71,16 +70,6 @@ export class DatabaseModule
         {
           provide: "FlushInterval",
           useValue: config.flush,
-        },
-        {
-          provide: "DatabaseMutex",
-          useFactory: () => {
-            if (config.mutex.type === "local") return new LocalDatabaseMutex();
-
-            throw new Error(
-              `Mutex of type ${config.mutex.type} is not implemented`
-            );
-          },
         },
       ],
     };

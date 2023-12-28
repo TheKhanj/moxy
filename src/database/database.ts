@@ -1,10 +1,11 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { UserStats } from "../user";
-import { DatabaseMutex } from "./database.mutex";
+import { UserNotFoundError } from "../errors";
 
 export interface Database {
   get(key: string): Promise<UserStats>;
+  inc(key: string, stats: UserStats): Promise<void>;
   set(key: string, stats: UserStats): Promise<void>;
 }
 
@@ -15,9 +16,18 @@ export class MemoryDatabase implements Database {
   public async get(key: string): Promise<UserStats> {
     const ret = this.cache[key];
 
-    if (!ret) throw new Error(`User ${key} not found`);
+    if (!ret) throw new UserNotFoundError(key);
 
     return ret.clone();
+  }
+
+  public async inc(key: string, stats: UserStats): Promise<void> {
+    const ret = this.cache[key];
+
+    if (!ret) throw new UserNotFoundError(key);
+
+    ret.up += stats.up;
+    ret.down += stats.down;
   }
 
   public async set(key: string, stats: UserStats): Promise<void> {
@@ -25,79 +35,120 @@ export class MemoryDatabase implements Database {
   }
 }
 
+type Patch = {
+  type: "inc" | "set";
+  stats: UserStats;
+};
+
 @Injectable()
 export class PatcherDatabase implements Database {
+  private readonly logger = new Logger("CachedDatabase");
   private readonly cache: Record<string, UserStats | Error | undefined> = {};
-  private readonly patches: Record<string, UserStats | undefined> = {};
-
-  private static applyPatches(
-    to: UserStats,
-    patch?: UserStats,
-    cache?: UserStats
-  ) {
-    if (!patch) return to;
-    const c = !!cache ? cache : to.clone();
-
-    to.up += patch.up - c.up;
-    to.down += patch.down - c.down;
-    return to;
-  }
+  private readonly patches: Record<string, Patch[] | undefined> = {};
 
   public constructor(
     @Inject("InternalDatabase")
-    private readonly origin: Database,
-    @Inject("DatabaseMutex")
-    private readonly mutex: DatabaseMutex
+    private readonly origin: Database
   ) {}
 
   public async get(key: string): Promise<UserStats> {
-    const c = this.cache[key];
-    const cache = c ? c : await this.origin.get(key).catch((err: Error) => err);
-    const patch = this.patches[key];
-    this.cache[key] = cache;
+    const cache = this.cache[key];
+    const patches = this.patches[key];
 
-    if (cache instanceof Error) {
-      if (!patch) throw cache;
-      return patch;
-    }
+    let ret: Error | UserStats;
 
-    const ret = PatcherDatabase.applyPatches(cache.clone(), patch);
-    return ret;
+    if (cache) ret = cache;
+    else ret = await this.origin.get(key).catch((err: Error) => err);
+
+    this.cache[key] = ret;
+    return this.giveValue(ret, patches);
+  }
+
+  public async inc(key: string, stats: UserStats): Promise<void> {
+    this.pushPatch(key, {
+      type: "inc",
+      stats: stats.clone(),
+    });
   }
 
   public async set(key: string, stats: UserStats): Promise<void> {
-    this.patches[key] = stats.clone();
+    this.pushPatch(key, {
+      type: "set",
+      stats: stats.clone(),
+    });
   }
 
-  public async flush() {
+  public flush() {
     return Promise.allSettled(
-      Object.keys(this.patches).map((key) =>
-        this.flushKey(key, this.patches[key] as UserStats)
-      )
+      Object.keys(this.patches).map((key) => {
+        const patches = this.patches[key] as Patch[];
+
+        return this.flushKey(key, patches);
+      })
     );
   }
 
-  private async flushKey(key: string, patch: UserStats) {
-    const cache = this.cache[key];
+  private async flushKey(key: string, patches: Patch[]) {
+    const zero = UserStats.create({
+      key,
+      up: 0,
+      down: 0,
+    });
 
-    await this.mutex
-      .acquire(key)
-      .then(async () => {
-        const database = await this.origin.get(key).catch((err: Error) => err);
-        if (database instanceof Error) return this.origin.set(key, patch);
+    let accumulated = zero.clone();
 
-        const newStats = PatcherDatabase.applyPatches(
-          database.clone(),
-          patch,
-          cache instanceof Error ? undefined : cache
-        );
-        await this.origin.set(key, newStats);
-      })
-      .finally(async () => {
-        await this.mutex.release(key);
+    for (const patch of patches) {
+      switch (patch.type) {
+        case "inc":
+          accumulated.down += patch.stats.down;
+          accumulated.up += patch.stats.up;
+          break;
+        case "set":
+          accumulated = zero.clone();
+          await this.origin.set(key, patch.stats);
+          break;
+        default:
+          throw new Error("Unreachable code");
+      }
+    }
 
-        delete this.patches[key];
-        delete this.cache[key];
-      });
+    await this.origin.inc(key, accumulated);
+
+    delete this.patches[key];
+    delete this.cache[key];
+
+    this.logger.log(`${patches.length} patches flushed for user ${key}`);
+  }
+
+  private pushPatch(key: string, patch: Patch) {
+    const arr = this.patches[key] ?? [];
+
+    arr.push(patch);
+
+    this.patches[key] = arr;
+  }
+
+  private giveValue(stats: UserStats | Error, patches?: Patch[]) {
+    if (stats instanceof Error) throw stats;
+    if (!patches) return stats;
+    return this.accumulate(stats.clone(), patches);
+  }
+
+  private accumulate(stats: UserStats, patches: Patch[]) {
+    for (const patch of patches) {
+      switch (patch.type) {
+        case "inc":
+          stats.up += patch.stats.up;
+          stats.down += patch.stats.down;
+          break;
+        case "set":
+          stats.up = patch.stats.up;
+          stats.down = patch.stats.down;
+          break;
+        default:
+          throw new Error("Unreachable code");
+      }
+    }
+    return stats;
   }
 }
