@@ -11,7 +11,9 @@ describe("PatcherDatabase", () => {
 
   before(async () => {
     db = new PatcherDatabase(new MemoryDatabase());
+  });
 
+  it("should set and flush multiple times", async () => {
     await db.set(
       key,
       UserStats.create({
@@ -21,10 +23,8 @@ describe("PatcherDatabase", () => {
       })
     );
 
-    await db.flush();
-  });
+    assert.doesNotReject(() => db.get(key));
 
-  it("should set and flush multiple times", async () => {
     const stats = await db.get(key);
 
     async function testUpdate(update: Partial<UserStats>, flush: boolean) {

@@ -61,7 +61,7 @@ export class PatcherDatabase implements Database {
     else ret = await this.origin.get(key).catch((err: Error) => err);
 
     this.cache[key] = ret;
-    return this.giveValue(ret, patches);
+    return this.giveValue(key, ret, patches);
   }
 
   public async inc(key: string, stats: UserStats): Promise<void> {
@@ -128,10 +128,14 @@ export class PatcherDatabase implements Database {
     this.patches[key] = arr;
   }
 
-  private giveValue(stats: UserStats | Error, patches?: Patch[]) {
-    if (stats instanceof Error) throw stats;
-    if (!patches) return stats;
-    return this.accumulate(stats.clone(), patches);
+  private giveValue(key: string, stats: UserStats | Error, patches?: Patch[]) {
+    if (stats instanceof Error && !patches) throw stats;
+    const start =
+      stats instanceof Error
+        ? UserStats.create({ key, up: 0, down: 0 })
+        : stats;
+
+    return this.accumulate(start.clone(), patches ?? []);
   }
 
   private accumulate(stats: UserStats, patches: Patch[]) {
