@@ -39,7 +39,7 @@ const MemoryDatabaseDriverConfigSchema = z.object({
 
 const FileDatabaseDriverConfigSchema = z.object({
   type: z.literal("file"),
-  path: z.string(),
+  path: z.string().default("moxy.database.json"),
 });
 
 const DatabaseDriverConfigSchema = z
@@ -49,8 +49,7 @@ const DatabaseDriverConfigSchema = z
     FileDatabaseDriverConfigSchema,
   ])
   .default({
-    // TODO: change this to file
-    type: "memory",
+    type: "file",
   });
 
 const DatabaseConfigSchema = z
