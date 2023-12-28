@@ -30,7 +30,7 @@ jobs:
 
           echo "current branch version: $version, current upstream version: $latest"
 
-          echo "should-publish=$([[ $version > $latest ]] && echo -n 'true' || echo -n 'false')" >> $GITHUB_OUTPUT
+          echo "should-publish=true" >> $GITHUB_OUTPUT
 
       - run: npm publish
         name: Publish to npm
