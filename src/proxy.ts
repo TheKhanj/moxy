@@ -1,15 +1,9 @@
-import {
-  DynamicModule,
-  Inject,
-  Injectable,
-  Logger,
-  Module,
-} from "@nestjs/common";
 import * as net from "net";
 import { Transform } from "node:stream";
+import { DynamicModule, Injectable, Logger, Module } from "@nestjs/common";
 
+import { UserProxyConfig } from "./config";
 import { withErrorLogging } from "./utils";
-import { ProxyConfig, UserProxyConfig } from "./config";
 import { UserFactory, UserStatsService } from "./user";
 import { EventModule, MoxyEventEmitter } from "./event";
 

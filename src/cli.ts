@@ -2,13 +2,14 @@
 import { z } from "zod";
 import minimist from "minimist";
 import { NestFactory } from "@nestjs/core";
+import path, { dirname } from "node:path";
 import { DynamicModule, Module } from "@nestjs/common";
+import { existsSync, readFileSync } from "node:fs";
 
 import { UserModule } from "./user";
 import { ProxyModule } from "./proxy";
 import { DatabaseModule } from "./database/database.module";
 import { ConfigModule, ConfigService } from "./config";
-import { readFileSync } from "node:fs";
 
 @Module({})
 export class AppModule {
@@ -101,8 +102,11 @@ function parseSchema<T extends z.ZodTypeAny>(
 }
 
 function showVersion() {
-  // TODO: fix this
-  const { version } = JSON.parse(readFileSync("package.json").toString());
+  let dir = __filename;
+  while (dir && !existsSync(path.join(dir, "package.json"))) dir = dirname(dir);
+
+  const filePath = path.join(dir, "package.json");
+  const { version } = JSON.parse(readFileSync(filePath).toString());
   console.log(`Version: ${version}`);
   process.exit(1);
 }
