@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as fsp from "fs/promises";
+import { Mutex } from "async-mutex";
 import { promisify } from "util";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
@@ -41,6 +42,8 @@ export class MemoryDatabase implements Database {
 type FileContent = IUserStats[];
 
 export class FileDatabase implements Database {
+  private readonly mutex = new Mutex();
+
   public constructor(private readonly filePath: string) {}
 
   public async get(key: string): Promise<UserStats> {
@@ -77,7 +80,10 @@ export class FileDatabase implements Database {
   }
 
   private async write(content: FileContent) {
-    await fsp.writeFile(this.filePath, JSON.stringify(content, null, 2));
+    const release = await this.mutex.acquire();
+    await fsp
+      .writeFile(this.filePath, JSON.stringify(content, null, 2))
+      .finally(() => release());
   }
 
   private async getAll(): Promise<FileContent> {
