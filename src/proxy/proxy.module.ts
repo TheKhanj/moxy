@@ -2,7 +2,7 @@ import { ProxyStorage } from "./proxy.storage";
 import { ProxyEventEmitter } from "./proxy.event";
 
 export class ProxyModule {
-  public constructor(
+  private constructor(
     private readonly eventEmitter: ProxyEventEmitter,
     private readonly proxyStorage: ProxyStorage
   ) {}
