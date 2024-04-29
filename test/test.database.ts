@@ -1,17 +1,11 @@
-import * as fsp from "fs/promises";
 import * as assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { describe, it } from "node:test";
 
-import {
-  Database,
-  FileDatabase,
-  MemoryDatabase,
-  PatcherDatabase,
-} from "../../src/database/database";
-import { UserStats } from "../../src/user";
+import { Database } from "../src/database/database";
+import { UserStats } from "../src/user/user.stats";
+import { PatcherDatabase } from "../src/database/patcher.database";
 
-async function testDatabase(db: Database | PatcherDatabase) {
+export async function testDatabase(db: Database | PatcherDatabase) {
   const key = randomUUID();
 
   await db.set(
@@ -47,20 +41,3 @@ async function testDatabase(db: Database | PatcherDatabase) {
   await testUpdate({ up: 1, down: 1 }, true);
   await testUpdate({ up: 900 }, false);
 }
-
-describe("Database", () => {
-  it("should test PatcherDatabase", async () => {
-    await testDatabase(new PatcherDatabase(new MemoryDatabase()));
-  });
-
-  it("should test MemoryDatabase", async () => {
-    await testDatabase(new MemoryDatabase());
-  });
-
-  it("should test FileDatabase", async () => {
-    const path = `/tmp/file.database.test.${randomUUID()}.json`;
-
-    await testDatabase(new FileDatabase(path));
-    await fsp.rm(path).catch(() => {});
-  });
-});

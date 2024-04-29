@@ -1,32 +1,11 @@
-import {
-  DynamicModule,
-  Global,
-  Inject,
-  Logger,
-  Module,
-  OnApplicationBootstrap,
-  OnApplicationShutdown,
-} from "@nestjs/common";
+import { DynamicModule, Inject, Logger } from "@nestjs/common";
 
 import { MongoDbDatabaseModule } from "./mongodb.database";
 import { DatabaseConfig, DatabaseDriverConfig } from "../config";
-import { FileDatabase, MemoryDatabase, PatcherDatabase } from "./database";
 
 const logger = new Logger("Database");
 
-@Global()
-@Module({
-  exports: ["Database"],
-  providers: [
-    {
-      provide: "Database",
-      useClass: PatcherDatabase,
-    },
-  ],
-})
-export class DatabaseModule
-  implements OnApplicationBootstrap, OnApplicationShutdown
-{
+export class DatabaseModule {
   public constructor(
     @Inject("Database")
     private readonly patcher: PatcherDatabase,
