@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Logger } from "./logger";
 
 export function dateToString(date: Date) {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
@@ -19,6 +19,6 @@ export async function withErrorLogging<T>(
   logger: Logger
 ) {
   return fn().catch((err) => {
-    logger.error(err);
+    logger.err(err);
   });
 }
