@@ -1,6 +1,6 @@
 import { Proxy } from "./proxy";
 import { TcpProxy } from "./tcp.proxy";
-import { UserProxyConfig } from "../config/config.dto";
+import { IUserProxyConfig } from "../config/config.dto";
 import { ProxyEventEmitter } from "./proxy.event";
 
 export class ProxyStorage {
@@ -8,7 +8,7 @@ export class ProxyStorage {
 
   public constructor(private readonly eventEmitter: ProxyEventEmitter) {}
 
-  public async add(userKey: string, config: UserProxyConfig): Promise<Proxy> {
+  public async add(userKey: string, config: IUserProxyConfig): Promise<Proxy> {
     let proxy: Proxy;
     switch (config.protocol) {
       case "tcp":
@@ -28,11 +28,18 @@ export class ProxyStorage {
         );
     }
 
+    if (this.proxies[userKey])
+      throw new Error(`Proxy for user ${userKey} already exists`);
+
     this.proxies[userKey] = proxy;
 
     await proxy.listen();
 
     return proxy;
+  }
+
+  public exists(userKey: string) {
+    return !!this.proxies[userKey];
   }
 
   public get(userKey: string) {

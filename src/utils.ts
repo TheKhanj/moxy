@@ -15,10 +15,10 @@ export function stringToDate(dateString: string) {
 }
 
 export async function withErrorLogging<T>(
-  fn: () => Promise<T>,
+  fn: (() => Promise<T>) | (() => T),
   logger: Logger
 ) {
-  return fn().catch((err) => {
+  return Promise.resolve(fn()).catch((err) => {
     logger.err(err);
   });
 }

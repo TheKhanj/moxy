@@ -1,9 +1,9 @@
 import { Transform } from "node:stream";
 
-import { MoxyEventEmitter } from "../event";
+import { ProxyEventEmitter } from "./proxy.event";
 
 export function createCounterStream(
-  eventEmitter: MoxyEventEmitter,
+  eventEmitter: ProxyEventEmitter,
   type: "up" | "down",
   userKey: string,
   timeout: number
