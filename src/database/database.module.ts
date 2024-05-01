@@ -1,81 +1,60 @@
-import { DynamicModule, Inject, Logger } from "@nestjs/common";
-
-import { MongoDbDatabaseModule } from "./mongodb.database";
-import { DatabaseConfig, DatabaseDriverConfig } from "../config";
+import { Logger } from "../logger";
+import { Database } from "./database";
+import { FileDatabase } from "./file.database";
+import { MemoryDatabase } from "./memory.database";
+import { PatcherDatabase } from "./patcher.database";
+import { IDatabaseConfig } from "../config/config.dto";
+import { MongoDBDatabaseModule } from "./mongodb/mongodb.database.module";
 
 const logger = new Logger("Database");
 
 export class DatabaseModule {
-  public constructor(
-    @Inject("Database")
+  private constructor(
+    private readonly database: Database,
     private readonly patcher: PatcherDatabase,
-    @Inject("FlushInterval")
     private readonly flushInterval: number
   ) {}
 
-  private static getDriver(config: DatabaseDriverConfig): DynamicModule {
-    switch (config.type) {
+  private static create(config: IDatabaseConfig) {
+    const driver = config.driver;
+
+    let database: Database;
+    switch (driver.type) {
       case "mongodb":
-        return {
-          module: DatabaseModule,
-          imports: [MongoDbDatabaseModule.register(config)],
-        };
+        const mongoModule = MongoDBDatabaseModule.create(driver);
+        database = mongoModule.get("mongodb-database");
+        break;
       case "memory":
-        return {
-          module: DatabaseModule,
-          providers: [
-            {
-              provide: "InternalDatabase",
-              useClass: MemoryDatabase,
-            },
-          ],
-        };
+        database = new MemoryDatabase();
+        break;
       case "file":
-        return {
-          module: DatabaseModule,
-          providers: [
-            {
-              provide: "InternalDatabase",
-              useFactory: () => new FileDatabase(config.path),
-            },
-          ],
-        };
+        database = new FileDatabase(driver.path);
     }
+
+    const patcher = new PatcherDatabase(database);
+    return new DatabaseModule(database, patcher, config.flush);
   }
 
-  public static register(config: DatabaseConfig): DynamicModule {
-    const driver = this.getDriver(config.driver);
-
-    return {
-      module: DatabaseModule,
-      imports: [...(driver.imports ?? [])],
-      providers: [
-        ...(driver.providers ?? []),
-        {
-          provide: "FlushInterval",
-          useValue: config.flush,
-        },
-      ],
-    };
+  public get(key: "database"): Database {
+    return this.database;
   }
 
   private interval: NodeJS.Timeout;
 
-  public onApplicationBootstrap() {
+  public start() {
     this.interval = setInterval(() => {
       this.patcher.flush().then((results) => {
-        logger.log("Flushed entities");
+        logger.info("Flushed entities");
         const failedCount = results
           .filter((result) => result.status === "rejected")
           .reduce((prev) => prev + 1, 0);
 
-        if (failedCount)
-          logger.error(`Failed flushing ${failedCount} entities`);
+        if (failedCount) logger.err(`Failed flushing ${failedCount} entities`);
       });
     }, this.flushInterval);
   }
 
-  public onApplicationShutdown() {
+  public stop() {
     if (this.interval) clearInterval(this.interval);
   }
 }

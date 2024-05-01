@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 
-import { MongoDBDatabaseDriverConfig } from "../../config/config.dto";
 import { MongoDBDatabase, StatsSchema } from "./mongodb.database";
+import { IMongoDBDatabaseDriverConfig } from "../../config/config.dto";
 
 export class MongoDBDatabaseModule {
   private constructor(private readonly mongoDBDatabase: MongoDBDatabase) {}
 
   public static create(
-    config: MongoDBDatabaseDriverConfig
+    config: IMongoDBDatabaseDriverConfig
   ): MongoDBDatabaseModule {
     mongoose.connect(config.url, {
       dbName: config.databaseName,

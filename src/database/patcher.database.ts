@@ -69,14 +69,14 @@ export class PatcherDatabase implements Database {
           break;
         case "set":
           accumulated = zero.clone();
-          await this.origin.set(key, patch.stats);
+          await this.origin.set(key, patch.stats.up, patch.stats.down);
           break;
         default:
           throw new Error("Unreachable code");
       }
     }
 
-    await this.origin.inc(key, accumulated);
+    await this.origin.inc(key, accumulated.up, accumulated.down);
 
     delete this.patches[key];
     delete this.cache[key];
