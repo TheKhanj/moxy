@@ -1,7 +1,7 @@
 import { Logger } from "@nestjs/common";
 
 import { Database } from "./database";
-import { UserStats } from "../user/user.stats";
+import { UserStats } from "./user.stats";
 
 type Patch = {
   type: "inc" | "set";
@@ -28,17 +28,17 @@ export class PatcherDatabase implements Database {
     return this.giveValue(key, ret, patches);
   }
 
-  public async inc(key: string, stats: UserStats): Promise<void> {
+  public async inc(key: string, up: number, down: number): Promise<void> {
     this.pushPatch(key, {
       type: "inc",
-      stats: stats.clone(),
+      stats: UserStats.create({ key, up, down }),
     });
   }
 
-  public async set(key: string, stats: UserStats): Promise<void> {
+  public async set(key: string, up: number, down: number): Promise<void> {
     this.pushPatch(key, {
       type: "set",
-      stats: stats.clone(),
+      stats: UserStats.create({ key, up, down }),
     });
   }
 

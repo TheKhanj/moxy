@@ -3,7 +3,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 
 import { Database } from "../database";
 import { UserNotFoundError } from "../../errors";
-import { IUserStats, UserStats } from "../../user/user.stats";
+import { IUserStats, UserStats } from "../user.stats";
 
 @Schema({ collection: "stats", versionKey: false })
 class StatsModel implements IUserStats {
@@ -30,20 +30,22 @@ export class MongoDBDatabase implements Database {
     return UserStats.create(doc.toObject());
   }
 
-  public async inc(key: string, stats: UserStats): Promise<void> {
+  public async inc(key: string, up: number, down: number): Promise<void> {
     await this.model.findOneAndUpdate(
       { key },
       {
         $inc: {
-          down: stats.down,
-          up: stats.up,
+          up,
+          down,
         },
       }
     );
   }
 
-  public async set(key: string, stats: UserStats): Promise<void> {
-    const res = await this.model.findOneAndReplace({ key }, stats).exec();
-    if (!res) await this.model.create(stats.clone());
+  public async set(key: string, up: number, down: number): Promise<void> {
+    const res = await this.model
+      .findOneAndReplace({ key }, { key, up, down })
+      .exec();
+    if (!res) await this.model.create({ key, up, down });
   }
 }

@@ -5,7 +5,7 @@ import { promisify } from "util";
 
 import { Database } from "./database";
 import { UserNotFoundError } from "../errors";
-import { IUserStats, UserStats } from "../user/user.stats";
+import { IUserStats, UserStats } from "./user.stats";
 
 type FileContent = IUserStats[];
 
@@ -23,25 +23,25 @@ export class FileDatabase implements Database {
     return UserStats.create(found);
   }
 
-  public async inc(key: string, stats: UserStats): Promise<void> {
+  public async inc(key: string, up: number, down: number): Promise<void> {
     const all = await this.getAll();
     const found = all.find((stats) => stats.key === key);
 
-    if (!found) return this.set(key, stats);
+    if (!found) return this.set(key, up, down);
 
-    found.up += stats.up;
-    found.down += stats.down;
+    found.up += up;
+    found.down += down;
     await this.write(all);
   }
 
-  public async set(key: string, stats: UserStats): Promise<void> {
+  public async set(key: string, up: number, down: number): Promise<void> {
     const all = await this.getAll();
     const found = all.find((stats) => stats.key === key);
 
-    if (!found) all.push(stats.toObject());
+    if (!found) all.push({ key, up, down });
     else {
-      found.up = stats.up;
-      found.down = stats.down;
+      found.up = up;
+      found.down = down;
     }
 
     await this.write(all);
