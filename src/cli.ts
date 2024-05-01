@@ -11,7 +11,7 @@ import { readConfigFile } from "./config/config.service";
 
 async function runDaemon(config: string) {
   const appModule = await AppModule.create(config);
-  appModule.start();
+  await appModule.start();
 }
 
 async function sendSignal(config: string, signal: "reload") {

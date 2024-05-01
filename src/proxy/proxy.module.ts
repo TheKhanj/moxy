@@ -18,7 +18,7 @@ export class ProxyModule {
   public get(key: "proxy-event-emitter"): ProxyEventEmitter;
   public get(key: string): unknown {
     switch (key) {
-      case "proxy-sotrage":
+      case "proxy-storage":
         return this.proxyStorage;
       case "proxy-event-emitter":
         return this.eventEmitter;

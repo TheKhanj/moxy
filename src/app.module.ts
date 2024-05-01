@@ -1,7 +1,8 @@
 import { UserModule } from "./user/user.module";
-import { ConfigModule } from "./config/config.module";
-import { DatabaseModule } from "./database/database.module";
 import { ProxyModule } from "./proxy/proxy.module";
+import { ConfigModule } from "./config/config.module";
+import { readConfigFile } from "./config/config.service";
+import { DatabaseModule } from "./database/database.module";
 import { MasterController } from "./master.controller";
 
 export class AppModule {
@@ -14,8 +15,8 @@ export class AppModule {
   ) {}
 
   public static async create(configPath: string) {
+    const config = await readConfigFile(configPath)();
     const configModule = ConfigModule.create(configPath);
-    const config = await configModule.get("config-service").getConfig();
     const databaseModule = DatabaseModule.create(config.database);
     const userModule = UserModule.create(
       databaseModule.get("database"),
@@ -63,7 +64,8 @@ export class AppModule {
     }
   }
 
-  public start() {
+  public async start() {
+    await this.configModule.get("config-service").getConfig();
     this.databaseModule.start();
   }
 

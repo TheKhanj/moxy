@@ -49,6 +49,8 @@ export class Logger {
 
   private log(level: Level, message: string) {
     const ctx = this.context.join(": ");
-    this.outputStream.write(`${ctx}${level} - ${message}`);
+    this.outputStream.write(
+      `${new Date().toISOString()}: [${level}] ${ctx} - ${message}\n`
+    );
   }
 }

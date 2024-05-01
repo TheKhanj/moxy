@@ -9,6 +9,7 @@ export class ConfigModule {
 
   public static create(file: string): ConfigModule {
     const eventEmitter = new ConfigEventEmitter();
+    (global as any).test1 = eventEmitter;
     const readConfig = readConfigFile(file);
     const configService = new ConfigService(eventEmitter, readConfig);
 

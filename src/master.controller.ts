@@ -33,8 +33,7 @@ export class MasterController {
       return;
     }
 
-    const proxy = await this.proxyStorage.add(userConfig.key, userConfig.proxy);
-    await proxy.listen();
+    await this.recheckUser(userConfig.key);
   }
 
   private async handleDeleteUserConfig(userConfig: IUserConfig) {
@@ -45,7 +44,7 @@ export class MasterController {
       return;
     }
 
-    await this.proxyStorage.delete(userConfig.key);
+    await this.recheckUser(userConfig.key);
   }
 
   private async handleUpdateUserConfig(userConfig: IUserConfig) {
@@ -73,7 +72,6 @@ export class MasterController {
 
   private registerConfigEventHandlers(ev: ConfigEventEmitter) {
     const logger = new Logger("ConfigEventHandler");
-
     ev.on("new-user", (userConfig) =>
       withErrorLogging(() => this.handleNewUserConfig(userConfig), logger)
     );
