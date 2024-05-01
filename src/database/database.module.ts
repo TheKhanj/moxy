@@ -15,7 +15,7 @@ export class DatabaseModule {
     private readonly flushInterval: number
   ) {}
 
-  private static create(config: IDatabaseConfig) {
+  public static create(config: IDatabaseConfig) {
     const driver = config.driver;
 
     let database: Database;

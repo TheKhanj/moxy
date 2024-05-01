@@ -1,5 +1,4 @@
-import { Logger } from "@nestjs/common";
-
+import { Logger } from "../logger";
 import { Database } from "./database";
 import { UserStats } from "./user.stats";
 
@@ -81,7 +80,7 @@ export class PatcherDatabase implements Database {
     delete this.patches[key];
     delete this.cache[key];
 
-    this.logger.log(`${patches.length} patches flushed for user ${key}`);
+    this.logger.info(`${patches.length} patches flushed for user ${key}`);
   }
 
   private pushPatch(key: string, patch: Patch) {

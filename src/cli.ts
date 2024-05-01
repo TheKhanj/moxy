@@ -3,44 +3,19 @@ import { z } from "zod";
 import minimist from "minimist";
 import { kill } from "node:process";
 import * as fsp from "node:fs/promises";
-import { NestFactory } from "@nestjs/core";
 import path, { dirname } from "node:path";
-import { DynamicModule, Module } from "@nestjs/common";
 import { existsSync, readFileSync } from "node:fs";
 
-import { UserModule } from "./user";
-import { ProxyModule } from "./proxy";
-import { DatabaseModule } from "./database/database.module";
-import { ConfigModule, ConfigService } from "./config";
-
-@Module({})
-export class AppModule {
-  public static async register(configPath: string): Promise<DynamicModule> {
-    const configModule = await ConfigModule.register(configPath);
-    const config = await ConfigService.readConfig(configPath);
-    const userModule = UserModule.register(configModule, config.database);
-    return {
-      module: AppModule,
-      imports: [
-        configModule,
-        userModule,
-        DatabaseModule.register(config.database),
-        ProxyModule.register(configModule, userModule),
-      ],
-    };
-  }
-}
+import { AppModule } from "./app.module";
+import { readConfigFile } from "./config/config.service";
 
 async function runDaemon(config: string) {
-  const daemon = await NestFactory.createApplicationContext(
-    AppModule.register(config)
-  );
-
-  await daemon.init();
+  const appModule = await AppModule.create(config);
+  appModule.start();
 }
 
 async function sendSignal(config: string, signal: "reload") {
-  const c = await ConfigService.readConfig(config);
+  const c = await readConfigFile(config)();
 
   const content = await fsp.readFile(c.pidFile);
   const pid = +content.toString();
