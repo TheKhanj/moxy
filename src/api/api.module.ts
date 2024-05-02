@@ -26,7 +26,8 @@ export class ApiModule {
     const userService = new ApiUserService(
       configModule.get("config-service"),
       databaseModule.get("database"),
-      userModule.get("get-user-opt")
+      userModule.get("get-user-opt"),
+      userModule.get("recheck-user-opt")
     );
     const userController = new ApiUserController(userService);
     userController.register(router);

@@ -20,19 +20,20 @@ export class AppModule {
     const config = await readConfigFile(configPath)();
     const configModule = ConfigModule.create(configPath);
     const databaseModule = DatabaseModule.create(config.database);
-    const userModule = UserModule.create(
-      databaseModule.get("database"),
-      configModule.get("config-service")
-    );
     const proxyModule = ProxyModule.create();
+    const userModule = UserModule.create(
+      databaseModule,
+      configModule,
+      proxyModule
+    );
 
     const masterController = new MasterController(
       configModule.get("config-event-emitter"),
       proxyModule.get("proxy-event-emitter"),
       databaseModule.get("database"),
-      userModule.get("get-user-opt"),
       userModule.get("assert-user-stats-opt"),
-      proxyModule.get("proxy-storage")
+      proxyModule.get("proxy-storage"),
+      userModule.get("recheck-user-opt")
     );
 
     const apiModule = ApiModule.create(

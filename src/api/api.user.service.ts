@@ -3,12 +3,14 @@ import { IUserStats } from "../database/user.stats";
 import { GetUserOpt } from "../user/ops/get.user.opt";
 import { IUserConfig } from "../config/config.dto";
 import { ConfigService } from "../config/config.service";
+import { RecheckUserOpt } from "../user/ops/recheck.user.opt";
 
 export class ApiUserService {
   public constructor(
     private readonly configService: ConfigService,
     private readonly database: Database,
-    private readonly getUserOpt: GetUserOpt
+    private readonly getUserOpt: GetUserOpt,
+    private readonly recheckUserOpt: RecheckUserOpt
   ) {}
 
   public async queryUsers(offset?: number, limit?: number) {
@@ -33,9 +35,11 @@ export class ApiUserService {
 
   public async updateUserStats(stats: IUserStats) {
     await this.database.set(stats.key, stats.up, stats.down);
+    await this.recheckUserOpt.execute(stats.key);
   }
 
   public async updateUserConfig(userConfig: IUserConfig) {
     await this.configService.updateUserConfig(userConfig);
+    await this.recheckUserOpt.execute(userConfig.key);
   }
 }

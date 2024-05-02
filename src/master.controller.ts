@@ -1,8 +1,8 @@
 import { Logger } from "./logger";
 import { Database } from "./database/database";
-import { GetUserOpt } from "./user/ops/get.user.opt";
 import { IUserConfig } from "./config/config.dto";
 import { ProxyStorage } from "./proxy/proxy.storage";
+import { RecheckUserOpt } from "./user/ops/recheck.user.opt";
 import { withErrorLogging } from "./utils";
 import { ProxyEventEmitter } from "./proxy/proxy.event";
 import { ConfigEventEmitter } from "./config/config.event";
@@ -15,9 +15,9 @@ export class MasterController {
     configEventEmitter: ConfigEventEmitter,
     proxyEventEmitter: ProxyEventEmitter,
     private readonly database: Database,
-    private readonly getUserOpt: GetUserOpt,
     private readonly assertUserStatsOpt: AssertUserStatsOpt,
-    private readonly proxyStorage: ProxyStorage
+    private readonly proxyStorage: ProxyStorage,
+    private readonly recheckUserOpt: RecheckUserOpt
   ) {
     this.registerConfigEventHandlers(configEventEmitter);
     this.registerProxyEventHandlers(proxyEventEmitter);
@@ -33,7 +33,7 @@ export class MasterController {
       return;
     }
 
-    await this.recheckUser(userConfig.key);
+    await this.recheckUserOpt.execute(userConfig.key);
   }
 
   private async handleDeleteUserConfig(userConfig: IUserConfig) {
@@ -44,30 +44,11 @@ export class MasterController {
       return;
     }
 
-    await this.recheckUser(userConfig.key);
+    await this.recheckUserOpt.execute(userConfig.key);
   }
 
   private async handleUpdateUserConfig(userConfig: IUserConfig) {
-    await this.recheckUser(userConfig.key);
-  }
-
-  private async recheckUser(userKey: string) {
-    const user = await this.getUserOpt.execute(userKey);
-    const proxyExists = this.proxyStorage.exists(userKey);
-
-    if (proxyExists && !user.isEnabled()) await this.disableUser(userKey);
-    else if (!proxyExists && user.isEnabled())
-      await this.enableUser(user.config);
-  }
-
-  private async enableUser(userConfig: IUserConfig) {
-    await this.proxyStorage.add(userConfig.key, userConfig.proxy);
-    this.logger.info(`Enabled user ${userConfig.key}`);
-  }
-
-  private async disableUser(userKey: string) {
-    await this.proxyStorage.delete(userKey);
-    this.logger.info(`Disabled user ${userKey}`);
+    await this.recheckUserOpt.execute(userConfig.key);
   }
 
   private registerConfigEventHandlers(ev: ConfigEventEmitter) {
@@ -95,7 +76,7 @@ export class MasterController {
       type === "up" ? amount : 0,
       type === "down" ? amount : 0
     );
-    await this.recheckUser(userKey);
+    await this.recheckUserOpt.execute(userKey);
   }
 
   private registerProxyEventHandlers(ev: ProxyEventEmitter) {
