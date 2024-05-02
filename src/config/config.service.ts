@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { readFile } from "node:fs";
+import { Mutex } from "async-mutex";
 import { promisify } from "node:util";
+import { readFile, writeFile } from "node:fs";
 
 import { Config } from "./config";
 import { Logger } from "../logger";
 import { ConfigEventEmitter } from "./config.event";
-import { IConfig, ConfigSchema } from "./config.dto";
+import { IConfig, ConfigSchema, IUserConfig } from "./config.dto";
 
 export function parseConfig(config: z.input<typeof ConfigSchema>): IConfig {
   const parsed = ConfigSchema.parse(config);
@@ -17,7 +18,10 @@ export function parseConfig(config: z.input<typeof ConfigSchema>): IConfig {
   return parsed;
 }
 
-export function readConfigFile(file: string): () => Promise<Config> {
+type ReadConfig = () => Promise<Config>;
+type WriteConfig = (config: IConfig) => Promise<void>;
+
+export function readConfigFile(file: string): ReadConfig {
   return async () => {
     const content = await promisify(readFile)(file);
     const json = JSON.parse(content.toString());
@@ -26,15 +30,22 @@ export function readConfigFile(file: string): () => Promise<Config> {
   };
 }
 
-type ReadConfig = () => Promise<Config>;
+export function writeConfigFile(file: string): WriteConfig {
+  return async (config: IConfig) => {
+    const buffer = Buffer.from(JSON.stringify(config, null, 2));
+    await promisify(writeFile)(file, buffer);
+  };
+}
 
 export class ConfigService {
   private cache?: Config;
   private readonly logger = new Logger("ConfigService");
+  private readonly mutex = new Mutex();
 
   public constructor(
     private readonly eventEmitter: ConfigEventEmitter,
-    private readonly readConfig: ReadConfig
+    private readonly readConfigFromOrigin: ReadConfig,
+    private readonly writeConfigToOrigin: WriteConfig
   ) {
     process.on("SIGHUP", () => {
       this.logger.info("Reloading config");
@@ -42,10 +53,22 @@ export class ConfigService {
     });
   }
 
-  public async getConfig(): Promise<Config> {
+  public async get(): Promise<Config> {
     if (this.cache) return this.cache;
 
     return this.reloadCache();
+  }
+
+  public async update(config: IConfig) {
+    await this.mutex.acquire();
+    await this.writeConfigToOrigin(config).finally(() => this.mutex.release());
+    await this.reloadCache();
+  }
+
+  public async updateUserConfig(userConfig: IUserConfig): Promise<void> {
+    const config = await this.get();
+    config.users[userConfig.key] = userConfig;
+    await this.update(config);
   }
 
   public async reloadCache(): Promise<Config> {
@@ -57,6 +80,11 @@ export class ConfigService {
     this.logger.info("Reloaded config");
 
     return this.cache;
+  }
+
+  private async readConfig() {
+    await this.mutex.acquire();
+    return this.readConfigFromOrigin().finally(() => this.mutex.release());
   }
 
   private async emitChangeEvents(newConfig: IConfig, oldConfig?: IConfig) {

@@ -9,7 +9,7 @@ export class GetUserOpt {
   ) {}
 
   public async execute(userKey: string) {
-    const config = await this.configService.getConfig();
+    const config = await this.configService.get();
     const userConfig = config.getUser(userKey);
     const stats = await this.database.get(userKey);
 

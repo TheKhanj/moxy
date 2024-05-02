@@ -1,3 +1,4 @@
+import { ApiModule } from "./api/api.module";
 import { UserModule } from "./user/user.module";
 import { ProxyModule } from "./proxy/proxy.module";
 import { ConfigModule } from "./config/config.module";
@@ -11,6 +12,7 @@ export class AppModule {
     private readonly databaseModule: DatabaseModule,
     private readonly userModule: UserModule,
     private readonly proxyModule: ProxyModule,
+    private readonly apiModule: ApiModule,
     private readonly masterController: MasterController
   ) {}
 
@@ -33,11 +35,19 @@ export class AppModule {
       proxyModule.get("proxy-storage")
     );
 
+    const apiModule = ApiModule.create(
+      config.api,
+      configModule,
+      databaseModule,
+      userModule
+    );
+
     return new AppModule(
       configModule,
       databaseModule,
       userModule,
       proxyModule,
+      apiModule,
       masterController
     );
   }
@@ -57,6 +67,8 @@ export class AppModule {
         return this.userModule;
       case "proxy-module":
         return this.proxyModule;
+      case "api-module":
+        return this.apiModule;
       case "master-controller":
         return this.masterController;
       default:
@@ -67,9 +79,11 @@ export class AppModule {
   public async start() {
     this.databaseModule.start();
     await this.configModule.start();
+    await this.apiModule.start();
   }
 
-  public stop() {
+  public async stop() {
     this.databaseModule.stop();
+    await this.apiModule.stop();
   }
 }

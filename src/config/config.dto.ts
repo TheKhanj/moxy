@@ -21,7 +21,7 @@ export type IUserTcpProxyConfig = z.output<typeof UserTcpProxyConfigSchema>;
 const UserProxyConfigSchema = z.union([UserTcpProxyConfigSchema, z.never()]);
 export type IUserProxyConfig = z.output<typeof UserProxyConfigSchema>;
 
-const UserConfigSchema = z.object({
+export const UserConfigSchema = z.object({
   key: z.string().default("placeholder"),
   remark: z.string().optional(),
   limit: z.union([z.number(), z.literal("unlimit")]).default("unlimit"),
@@ -74,7 +74,21 @@ const DatabaseConfigSchema = z
   .default({});
 export type IDatabaseConfig = z.output<typeof DatabaseConfigSchema>;
 
+const ApiConfigSchema = z
+  .union([
+    z.object({
+      enabled: z.literal(true).default(true),
+      host: z.string().default("127.0.0.1"),
+      port: z.number().default(6969),
+    }),
+    z.object({ enabled: z.literal(false) }),
+  ])
+  .default({ enabled: true });
+
+export type IApiConfig = z.output<typeof ApiConfigSchema>;
+
 export const ConfigSchema = z.object({
+  api: ApiConfigSchema,
   pidFile: z.string().default("moxy.pid"),
   database: DatabaseConfigSchema,
   users: z.record(UserConfigSchema),

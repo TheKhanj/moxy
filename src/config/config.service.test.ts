@@ -3,6 +3,7 @@ import * as assert from "node:assert";
 import { describe, it } from "node:test";
 
 import { Config } from "./config";
+import { IConfig } from "./config.dto";
 import { ConfigEventEmitter } from "./config.event";
 import { ConfigService, parseConfig } from "./config.service";
 
@@ -30,10 +31,11 @@ describe("ConfigService", () => {
 
       return new Config(config);
     };
+    const writeConfig = async (config: IConfig) => {};
 
     const eventEmitter = new ConfigEventEmitter();
 
-    const service = new ConfigService(eventEmitter, readConfig);
+    const service = new ConfigService(eventEmitter, readConfig, writeConfig);
 
     const mutex = new Mutex();
     mutex.acquire();
@@ -46,10 +48,10 @@ describe("ConfigService", () => {
       mutex.release();
     });
 
-    await service.getConfig();
+    await service.get();
     changedConfig = true;
     await service.reloadCache();
-    await service.getConfig();
+    await service.get();
 
     // wait for all events to emit
     await mutex.acquire();
