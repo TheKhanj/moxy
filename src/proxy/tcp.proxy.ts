@@ -72,7 +72,7 @@ export class TcpProxy implements Proxy {
         this.forwardingPort,
         this.forwardingAddress,
         () => {
-          this.logger.info("Connected to forward port");
+          this.logger.info("Connected to forwarding port");
 
           const upCounter = createCounterStream(
             this.proxyEventEmitter,
@@ -100,17 +100,17 @@ export class TcpProxy implements Proxy {
       clientSocket.setTimeout(this.socketTimeout);
 
       clientSocket.on("close", () => {
-        this.logger.info("Client disconnected");
+        this.logger.info("Client socket closed");
         forwardSocket.end();
       });
 
       clientSocket.on("error", (err) => {
         this.logger.err(`Local socket error: ${err.toString()}`);
-        clientSocket.end();
+        forwardSocket.end();
       });
 
       forwardSocket.on("close", () => {
-        this.logger.info("Forward disconnected");
+        this.logger.info("Forward socket closed");
       });
 
       forwardSocket.on("error", (err) => {
