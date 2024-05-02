@@ -10,7 +10,6 @@ const logger = new Logger("Database");
 
 export class DatabaseModule {
   private constructor(
-    private readonly database: Database,
     private readonly patcher: PatcherDatabase,
     private readonly flushInterval: number
   ) {}
@@ -32,11 +31,11 @@ export class DatabaseModule {
     }
 
     const patcher = new PatcherDatabase(database);
-    return new DatabaseModule(database, patcher, config.flush);
+    return new DatabaseModule(patcher, config.flush);
   }
 
   public get(key: "database"): Database {
-    return this.database;
+    return this.patcher;
   }
 
   private interval: NodeJS.Timeout;
