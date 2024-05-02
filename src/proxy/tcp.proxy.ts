@@ -66,6 +66,7 @@ export class TcpProxy implements Proxy {
     function handleClient(this: TcpProxy, clientSocket: net.Socket) {
       eventEmitter.once("destroy", () => {
         clientSocket.destroy();
+        eventEmitter.removeAllListeners();
       });
 
       const forwardSocket = net.createConnection(
