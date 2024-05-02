@@ -1,6 +1,6 @@
 {
   "name": "moxyjs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Distributed transparent proxy with traffic control facilities",
   "author": "Pooyan Khanjankhani <pooyankhan@gmail.com>",
   "license": "MIT",
@@ -22,8 +22,20 @@
   "files": [
     "dist/src/*.d.ts",
     "dist/src/*.js",
+    "dist/src/api/*.d.ts",
+    "dist/src/api/*.js",
+    "dist/src/config/*.d.ts",
+    "dist/src/config/*.js",
     "dist/src/database/*.d.ts",
-    "dist/src/database/*.js"
+    "dist/src/database/*.js",
+    "dist/src/database/mongodb/*.d.ts",
+    "dist/src/database/mongodb/*.js",
+    "dist/src/proxy/*.d.ts",
+    "dist/src/proxy/*.js",
+    "dist/src/user/*.d.ts",
+    "dist/src/user/*.js",
+    "dist/src/user/ops/*.d.ts",
+    "dist/src/user/ops/*.js"
   ],
   "homepage": "https://github.com/thekhanj/moxy#readme",
   "bin": {
