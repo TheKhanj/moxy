@@ -14,11 +14,17 @@ export function stringToDate(dateString: string) {
   return dateObject;
 }
 
+export function isDebug() {
+  return !!process.env.DEBUG;
+}
+
 export async function withErrorLogging<T>(
   fn: (() => Promise<T>) | (() => T),
   logger: Logger
 ) {
   return Promise.resolve(fn()).catch((err) => {
     logger.err(err);
+    if (isDebug() && err instanceof Error)
+      err.stack?.split("\n").forEach((line) => logger.err(line));
   });
 }

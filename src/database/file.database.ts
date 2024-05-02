@@ -55,6 +55,11 @@ export class FileDatabase implements Database {
   }
 
   private async getAll(): Promise<FileContent> {
+    await this.mutex.acquire();
+    return this.readFile().finally(() => this.mutex.release());
+  }
+
+  private async readFile(): Promise<FileContent> {
     await this.assertFile();
     const buffer = await fsp.readFile(this.filePath);
     return JSON.parse(buffer.toString());
