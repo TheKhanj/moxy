@@ -81,6 +81,8 @@ export class MasterController {
     ev.on("update-user", (_, newConfig) =>
       withErrorLogging(() => this.handleUpdateUserConfig(newConfig), logger)
     );
+
+    logger.info("Registered config event handlers");
   }
 
   private async handleNewTraffic(
@@ -104,5 +106,7 @@ export class MasterController {
         logger
       );
     });
+
+    logger.info("Registered traffic event handlers");
   }
 }

@@ -1,3 +1,5 @@
+import * as fsp from "fs/promises";
+
 import { ConfigEventEmitter } from "./config.event";
 import { ConfigService, readConfigFile } from "./config.service";
 
@@ -27,5 +29,11 @@ export class ConfigModule {
       default:
         throw new Error("Unreachable code");
     }
+  }
+
+  public async start() {
+    const config = await this.configService.getConfig();
+
+    await fsp.writeFile(config.pidFile, String(process.pid));
   }
 }

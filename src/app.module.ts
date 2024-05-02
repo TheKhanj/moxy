@@ -65,8 +65,8 @@ export class AppModule {
   }
 
   public async start() {
-    await this.configModule.get("config-service").getConfig();
     this.databaseModule.start();
+    await this.configModule.start();
   }
 
   public stop() {
