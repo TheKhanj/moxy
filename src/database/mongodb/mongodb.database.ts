@@ -1,21 +1,20 @@
-import { Model } from "mongoose";
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Model, Schema } from "mongoose";
 
 import { Database } from "../database";
+import { UserStats } from "../user.stats";
 import { UserNotFoundError } from "../../errors";
-import { IUserStats, UserStats } from "../user.stats";
 
-@Schema({ collection: "stats", versionKey: false })
-class StatsModel implements IUserStats {
-  @Prop({ type: String })
-  key: string;
-  @Prop({ type: Number })
-  up: number;
-  @Prop({ type: Number })
-  down: number;
+export const StatsSchema = new Schema({
+  key: String,
+  up: Number,
+  down: Number,
+});
+
+class StatsModel {
+  key?: string | null;
+  up?: number | null;
+  down?: number | null;
 }
-
-export const StatsSchema = SchemaFactory.createForClass(StatsModel);
 
 export class MongoDBDatabase implements Database {
   public constructor(private readonly model: Model<StatsModel>) {}
